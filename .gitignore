@@ -49,3 +49,12 @@ META-INF/MANIFEST.MF
 
 # Release packages
 *.zip
+
+**/node_modules/
+**/.mvn/
+**/*.log
+**/logs/
+**/log/
+**/target/
+**/*.jar/
+
