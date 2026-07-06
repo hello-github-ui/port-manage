@@ -67,6 +67,20 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('端口管理工具')
         self.setGeometry(100, 100, 880, 650)
         icon_path = get_icon_path()
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.create_search_input()
+
+
+    def create_search_input(self):
+        """创建端口号/进程名/PID输入区域"""
+        search_group = QGroupBox('搜索区域')
+        search_layout = QHBoxLayout(search_group)
+        search_layout.setSpacing(10)
+
 
 
 def get_icon_path():
