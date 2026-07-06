@@ -1,0 +1,5 @@
+# GUI framework - cross-platform graphical interface
+PyQt5>=5.15.9
+
+# Build tools (for CI/CD)
+pyinstaller>=6.0.0
