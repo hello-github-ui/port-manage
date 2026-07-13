@@ -58,7 +58,7 @@ META-INF/MANIFEST.MF
 **/target/
 **/*.jar/
 
-# python envorinment
+# v2 envorinment
 **/.venv/
 **/venv/
 **/dist/

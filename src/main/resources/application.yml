@@ -30,7 +30,7 @@ port-manage:
     # 常用端口范围
     common-ports: 80,443,3000,3306,5432,6379,8000,8080,8888,9000,9527
     # 开发进程关键字
-    dev-process-keywords: idea,java,tace,claude,springboot,node,python,maven,gradle
+    dev-process-keywords: idea,java,tace,claude,springboot,node,v2,maven,gradle
 
 # 日志配置
 logging:
