@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2026/8/21 15:46
+# @Time    : 2026/8/21 17:42
 # @Author  : 19921224
-# @File    : ExampleWidget.py
+# @File    : ui_widget.py
 # @Software: PyCharm
 # @Description:
 from PyQt5.QtGui import QIcon
@@ -13,7 +13,7 @@ def print_value(value):
     print(value)
 
 
-class ExampleWidget(QWidget):
+class UIWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.initUI()
