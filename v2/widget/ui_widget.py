@@ -41,8 +41,8 @@ class UIWidget(QWidget):
         # 2. 顶部卡片 (Port Manager 标题栏)
         # ==========================================
         # QWidget 卡片容器，表示容器或者画布，可以把它想象成一个空白的盒子，容器整体对外呈现为一个整体
-        top_card = QWidget()
-        top_card.setStyleSheet("""
+        top_card_widget = QWidget()
+        top_card_widget.setStyleSheet("""
             QWidget {
                 background-color: #ffffff;
                 border-radius: 12px;
@@ -50,9 +50,9 @@ class UIWidget(QWidget):
             }
         """)
         # 卡片容器的内部布局
-        top_layout = QHBoxLayout(top_card)
-        top_layout.setContentsMargins(25, 15, 25, 15)
-        top_layout.setSpacing(20)
+        top_card_layout = QHBoxLayout(top_card_widget)
+        top_card_layout.setContentsMargins(25, 15, 25, 15)
+        top_card_layout.setSpacing(20)
 
         # 左边：标题
         self.title_label = QLabel("Port Manager")
@@ -64,10 +64,10 @@ class UIWidget(QWidget):
                 padding: 5px;
             }
         """)
-        top_layout.addWidget(self.title_label)
+        top_card_layout.addWidget(self.title_label)
 
         # 中间：弹簧
-        top_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        top_card_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
         # 右边：信息组
         right_group = QHBoxLayout()
@@ -99,22 +99,22 @@ class UIWidget(QWidget):
         avatar_label.setText("U")
         right_group.addWidget(avatar_label)
 
-        top_layout.addLayout(right_group)
-        main_layout.addWidget(top_card)
+        top_card_layout.addLayout(right_group)
+        main_layout.addWidget(top_card_widget)
 
         # ==========================================
         # 3. 搜索栏卡片 (搜索框 + 按钮)
         # ==========================================
-        search_card = QWidget()
-        search_card.setStyleSheet("""
+        search_card_widget = QWidget()
+        search_card_widget.setStyleSheet("""
             QWidget {
                 background-color: #ffffff;
                 border-radius: 10px;
             }
         """)
-        search_layout = QHBoxLayout(search_card)
-        search_layout.setContentsMargins(20, 12, 20, 12)
-        search_layout.setSpacing(12)
+        search_card_layout = QHBoxLayout(search_card_widget)
+        search_card_layout.setContentsMargins(20, 12, 20, 12)
+        search_card_layout.setSpacing(12)
 
         # 搜索输入框（美化）
         self.search_input_edit = QLineEdit()
@@ -133,7 +133,7 @@ class UIWidget(QWidget):
                 background-color: #ffffff;
             }
         """)
-        search_layout.addWidget(self.search_input_edit)
+        search_card_layout.addWidget(self.search_input_edit)
 
         # 搜索按钮（灰色）
         self.search_btn = QPushButton("搜索")
@@ -155,7 +155,7 @@ class UIWidget(QWidget):
                 background-color: #d0d0d0;
             }
         """)
-        search_layout.addWidget(self.search_btn)
+        search_card_layout.addWidget(self.search_btn)
 
         # 刷新按钮（蓝色）
         self.flush_btn = QPushButton("刷新")
@@ -177,7 +177,7 @@ class UIWidget(QWidget):
                 background-color: #1565C0;
             }
         """)
-        search_layout.addWidget(self.flush_btn)
+        search_card_layout.addWidget(self.flush_btn)
 
         # 暂停自动刷新按钮
         self.pause_auto_flush_btn = QPushButton("暂停自动刷新")
@@ -195,23 +195,23 @@ class UIWidget(QWidget):
                 background-color: #e0e0e0;
             }
         """)
-        search_layout.addWidget(self.pause_auto_flush_btn)
+        search_card_layout.addWidget(self.pause_auto_flush_btn)
 
-        main_layout.addWidget(search_card)
+        main_layout.addWidget(search_card_widget)
 
         # ==========================================
         # 4. 筛选栏卡片 (下拉框 + 清除按钮)
         # ==========================================
-        filter_card = QWidget()
-        filter_card.setStyleSheet("""
+        filter_card_widget = QWidget()
+        filter_card_widget.setStyleSheet("""
             QWidget {
                 background-color: #ffffff;
                 border-radius: 10px;
             }
         """)
-        filter_layout = QHBoxLayout(filter_card)
-        filter_layout.setContentsMargins(20, 12, 20, 12)
-        filter_layout.setSpacing(12)
+        filter_card_layout = QHBoxLayout(filter_card_widget)
+        filter_card_layout.setContentsMargins(20, 12, 20, 12)
+        filter_card_layout.setSpacing(12)
 
         # 通用下拉框样式
         combo_style = """
@@ -240,8 +240,8 @@ class UIWidget(QWidget):
         self.port_type_box = QComboBox()
         self.port_type_box.setStyleSheet(combo_style)
         self.port_type_box.addItems(["全部", "前端", "后端", "数据库", "其它"])
-        filter_layout.addWidget(self.port_type_box_label)
-        filter_layout.addWidget(self.port_type_box)
+        filter_card_layout.addWidget(self.port_type_box_label)
+        filter_card_layout.addWidget(self.port_type_box)
 
         # 进程类型
         self.process_type_box_label = QLabel("进程类型：")
@@ -249,36 +249,36 @@ class UIWidget(QWidget):
         self.process_type_box.setStyleSheet(combo_style)
         self.process_type_box.addItems(
             ["全部", "Java", "Node.js", "Python", "Web服务器", "数据库", "IDE", "浏览器", "系统", "其它"])
-        filter_layout.addWidget(self.process_type_box_label)
-        filter_layout.addWidget(self.process_type_box)
+        filter_card_layout.addWidget(self.process_type_box_label)
+        filter_card_layout.addWidget(self.process_type_box)
 
         # 协议
         self.protocol_type_box_label = QLabel("协议：")
         self.protocol_type_box = QComboBox()
         self.protocol_type_box.setStyleSheet(combo_style)
         self.protocol_type_box.addItems(["全部", "TCP", "UDP"])
-        filter_layout.addWidget(self.protocol_type_box_label)
-        filter_layout.addWidget(self.protocol_type_box)
+        filter_card_layout.addWidget(self.protocol_type_box_label)
+        filter_card_layout.addWidget(self.protocol_type_box)
 
         # 开发进程
         self.dev_process_box_label = QLabel("开发进程：")
         self.dev_process_box = QComboBox()
         self.dev_process_box.setStyleSheet(combo_style)
         self.dev_process_box.addItems(["全部", "是", "否"])
-        filter_layout.addWidget(self.dev_process_box_label)
-        filter_layout.addWidget(self.dev_process_box)
+        filter_card_layout.addWidget(self.dev_process_box_label)
+        filter_card_layout.addWidget(self.dev_process_box)
 
         # 常用端口
         self.commonly_used_port_box_label = QLabel("常用端口：")
         self.commonly_used_port_box = QComboBox()
         self.commonly_used_port_box.setStyleSheet(combo_style)
         self.commonly_used_port_box.addItems([
-            "80 - HTTP", "443 - HTTPS", "3000 - React/Node", "3306 - MySQL",
+            "选择端口", "80 - HTTP", "443 - HTTPS", "3000 - React/Node", "3306 - MySQL",
             "5432 - PostgreSQL", "6379 - Redis", "8080 - Tomcat", "8888 - Jupyter",
             "9090 - Prometheus", "27017 - MongoDB"
         ])
-        filter_layout.addWidget(self.commonly_used_port_box_label)
-        filter_layout.addWidget(self.commonly_used_port_box)
+        filter_card_layout.addWidget(self.commonly_used_port_box_label)
+        filter_card_layout.addWidget(self.commonly_used_port_box)
 
         # 清除筛选按钮（橙色）
         self.clear_choose_btn = QPushButton("清除筛选")
@@ -300,23 +300,23 @@ class UIWidget(QWidget):
                 background-color: #E65100;
             }
         """)
-        filter_layout.addWidget(self.clear_choose_btn)
+        filter_card_layout.addWidget(self.clear_choose_btn)
 
-        main_layout.addWidget(filter_card)
+        main_layout.addWidget(filter_card_widget)
 
         # ==========================================
         # 5. 统计栏卡片 (端口数 + 时间)
         # ==========================================
-        stats_card = QWidget()
-        stats_card.setStyleSheet("""
+        stats_card_widget = QWidget()
+        stats_card_widget.setStyleSheet("""
             QWidget {
                 background-color: #ffffff;
                 border-radius: 10px;
             }
         """)
-        stats_layout = QHBoxLayout(stats_card)
-        stats_layout.setContentsMargins(20, 12, 20, 12)
-        stats_layout.setSpacing(25)
+        stats_card_layout = QHBoxLayout(stats_card_widget)
+        stats_card_layout.setContentsMargins(20, 12, 20, 12)
+        stats_card_layout.setSpacing(25)
 
         self.total_port_nums_label = QLabel("总端口数：35")
         self.dev_process_label = QLabel("开发进程：9")
@@ -332,40 +332,29 @@ class UIWidget(QWidget):
         self.udp_label.setStyleSheet(style)
         self.latest_scan_time.setStyleSheet(style)
 
-        stats_layout.addWidget(self.total_port_nums_label)
-        stats_layout.addWidget(self.dev_process_label)
-        stats_layout.addWidget(self.tcp_label)
-        stats_layout.addWidget(self.udp_label)
-        stats_layout.addWidget(self.latest_scan_time)
+        stats_card_layout.addWidget(self.total_port_nums_label)
+        stats_card_layout.addWidget(self.dev_process_label)
+        stats_card_layout.addWidget(self.tcp_label)
+        stats_card_layout.addWidget(self.udp_label)
+        stats_card_layout.addWidget(self.latest_scan_time)
 
-        main_layout.addWidget(stats_card)
+        main_layout.addWidget(stats_card_widget)
 
         # ==========================================
         # 6. 表格区域 (占位，后续加 QTableWidget)
         # ==========================================
-        # 这里先留空，你可以加 QTableWidget 或者 QScrollArea + QTableWidget
-        # table_widget = QTableWidget()
-        # main_layout.addWidget(table_widget)
-
-        table_card = QTableWidget()
-        table_card.setStyleSheet("""
-            QWidget {
-                background-color: #ffffff;
-                border-radius: 10px;
-            }
-        """)
-        table_layout = QHBoxLayout(table_card)
-        table_layout.setContentsMargins(20, 10, 20, 10)
-        table_layout.setSpacing(15)
         # 创建表格
-        self.port_table = QTableWidget()
+        table_card_widget = QTableWidget()
         # 设置表格为10列显示
-        self.port_table.setColumnCount(10)
+        table_card_widget.setColumnCount(10)
+        table_card_layout = QHBoxLayout(table_card_widget)
+        table_card_layout.setContentsMargins(20, 10, 20, 10)
+        table_card_layout.setSpacing(15)
         # 设置表头
         headers = ["端口", "类型", "协议", "状态", "PID", "进程名", "命令行", "用户", "开发进程", "操作"]
-        self.port_table.setHorizontalHeaderLabels(headers)
+        table_card_widget.setHorizontalHeaderLabels(headers)
         # 设置表格样式
-        self.port_table.setStyleSheet("""
+        table_card_widget.setStyleSheet("""
                     QTableWidget {
                         background-color: #ffffff;
                         border: none;  /* 去掉边框 */
@@ -390,47 +379,48 @@ class UIWidget(QWidget):
                     }
                 """)
         # 设置列宽自适应
-        self.port_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table_card_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # 这里我们加一列“复选框”作为第0列，后面列顺延
-        self.port_table.insertColumn(0)
-        self.port_table.setHorizontalHeaderItem(0, QTableWidgetItem(""))  # 表头留空
-        self.port_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
-        self.port_table.setColumnWidth(0, 40)  # 复选框列宽度
+        table_card_widget.insertColumn(0)
+        table_card_widget.setHorizontalHeaderItem(0, QTableWidgetItem(""))  # 表头留空
+        table_card_widget.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        table_card_widget.setColumnWidth(0, 40)  # 复选框列宽度
         # 设置水平滚动条隐藏（如果数据不超宽）
-        self.port_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        table_card_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # 垂直滚动条保留
-        self.port_table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        table_layout.addWidget(self.port_table)
-        main_layout.addWidget(table_card)
+        table_card_widget.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        table_card_layout.addWidget(table_card_widget)
+
+        main_layout.addWidget(table_card_widget)
 
         # ==========================================
         # 7. 填充模拟数据 (2条)
         # ==========================================
         import v2.utils.mock_util as mock_util
-        mock_util.fill_mock_data(self.port_table)
+        mock_util.fill_mock_data(table_card_widget)
 
         # ==========================================
         # 8. 底部状态栏 (接在表格下面)
         # ==========================================
-        status_card = QWidget()
-        status_card.setStyleSheet("""
+        bottom_status_card_widget = QWidget()
+        bottom_status_card_widget.setStyleSheet("""
                    QWidget {
                        background-color: #ffffff;
                        border-radius: 10px;
                    }
                """)
-        status_layout = QHBoxLayout(status_card)
-        status_layout.setContentsMargins(20, 10, 20, 10)
-        status_layout.setSpacing(15)
+        status_card_layout = QHBoxLayout(bottom_status_card_widget)
+        status_card_layout.setContentsMargins(20, 10, 20, 10)
+        status_card_layout.setSpacing(15)
         self.status_label = QLabel("加载成功: 35 个端口")
         self.status_label.setStyleSheet("color: #4CAF50; font-size: 13px; font-weight: bold;")
-        status_layout.addWidget(self.status_label)
+        status_card_layout.addWidget(self.status_label)
 
         self.auto_refresh_label = QLabel("自动刷新：开启 (5 秒)")
         self.auto_refresh_label.setStyleSheet("color: #757575; font-size: 13px;")
-        status_layout.addStretch()
-        status_layout.addWidget(self.auto_refresh_label)
-        main_layout.addWidget(status_card)
+        status_card_layout.addStretch()
+        status_card_layout.addWidget(self.auto_refresh_label)
+        main_layout.addWidget(bottom_status_card_widget)
 
         # ==========================================
         # 最后设置窗口
