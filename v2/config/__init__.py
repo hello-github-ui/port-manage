@@ -4,4 +4,4 @@
 # @Author  : 19921224
 # @File    : __init__.py
 # @Software: PyCharm
-# @Description: UI 表现层包
+# @Description: 配置层包

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2026/8/24 11:10
+# @Time    : 2026/8/24
 # @Author  : 19921224
-# @File    : __init__.py.py
+# @File    : __init__.py
 # @Software: PyCharm
-# @Description:
+# @Description: 工具包（类型识别 / 模拟数据 等）
