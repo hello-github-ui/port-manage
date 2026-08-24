@@ -180,7 +180,7 @@ class UIWidget(QWidget):
         search_card_layout.addWidget(self.flush_btn)
 
         # 暂停自动刷新按钮
-        self.pause_auto_flush_btn = QPushButton("暂停自动刷新")
+        self.pause_auto_flush_btn = QPushButton("⏸️ 暂停自动刷新")
         self.pause_auto_flush_btn.setMinimumWidth(130)
         self.pause_auto_flush_btn.setStyleSheet("""
             QPushButton {
@@ -351,7 +351,7 @@ class UIWidget(QWidget):
         table_card_layout.setContentsMargins(20, 10, 20, 10)
         table_card_layout.setSpacing(15)
         # 设置表头
-        headers = ["端口", "类型", "协议", "状态", "PID", "进程名", "命令行", "用户", "开发进程", "操作"]
+        headers = ["❤️", "端口", "类型", "协议", "状态", "PID", "进程名", "命令行", "用户", "开发进程", "操作"]
         table_card_widget.setHorizontalHeaderLabels(headers)
         # 设置表格样式
         table_card_widget.setStyleSheet("""
@@ -381,10 +381,10 @@ class UIWidget(QWidget):
         # 设置列宽自适应
         table_card_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # 这里我们加一列“复选框”作为第0列，后面列顺延
-        table_card_widget.insertColumn(0)
-        table_card_widget.setHorizontalHeaderItem(0, QTableWidgetItem(""))  # 表头留空
-        table_card_widget.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
-        table_card_widget.setColumnWidth(0, 40)  # 复选框列宽度
+        # table_card_widget.insertColumn(0)
+        # table_card_widget.setHorizontalHeaderItem(0, QTableWidgetItem(""))  # 表头留空
+        # table_card_widget.horizontalHeader().setSectionResizeMode(0, QHeaderView.Fixed)
+        # table_card_widget.setColumnWidth(0, 40)  # 复选框列宽度
         # 设置水平滚动条隐藏（如果数据不超宽）
         table_card_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # 垂直滚动条保留
