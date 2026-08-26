@@ -102,10 +102,13 @@ pip install -r requirements.txt
 #### 运行应用
 
 ```bash
-# 方式1：模块方式运行（推荐）
+# 方式1：根目录入口（推荐，和打包入口一致）
+python PortManager.py
+
+# 方式2：模块方式运行
 python -m v2.main
 
-# 方式2：直接运行入口文件
+# 方式3：直接运行v2目录下入口
 python v2/main.py
 ```
 
@@ -126,25 +129,28 @@ python v2/main.py
 pip install -r requirements.txt
 pip install pyinstaller>=6.0.0
 
-# 2. 验证应用可以正常运行
-python -m v2.main
+# 2. 验证应用可以正常运行（两种方式都可以）
+python PortManager.py
+# 或者：python -m v2.main
 ```
 
 ---
 
 ### Windows 打包
 
+**重要**：使用项目根目录下的 `PortManager.py` 作为入口，不要使用 `v2/main.py`，否则会出现模块找不到错误。
+
 #### 打包为单目录（推荐，启动快）
 
 ```powershell
 # 在项目根目录执行
-pyinstaller --name "PortManager" `
-    --windowed `
-    --icon "v2/icon.ico" `
-    --add-data "v2/icon.ico;v2/" `
-    --clean `
-    --noconfirm `
-    v2/main.py
+pyinstaller --name "PortManager" \
+    --windowed \
+    --icon "v2/icon.ico" \
+    --add-data "v2/icon.ico;v2/" \
+    --clean \
+    --noconfirm \
+    PortManager.py
 ```
 
 打包完成后，产物在 `dist/PortManager/` 目录下，整个目录压缩为 `PortManager-Windows-x64.zip` 即可发布。
@@ -152,14 +158,14 @@ pyinstaller --name "PortManager" `
 #### 打包为单文件（分发方便，启动稍慢）
 
 ```powershell
-pyinstaller --name "PortManager" `
-    --onefile `
-    --windowed `
-    --icon "v2/icon.ico" `
-    --add-data "v2/icon.ico;v2/" `
-    --clean `
-    --noconfirm `
-    v2/main.py
+pyinstaller --name "PortManager"  \
+	--onefile  \
+	--windowed  \
+	--icon "v2/icon.ico"  \
+	--add-data "v2/icon.ico;v2/"  \
+	--clean  \
+	--noconfirm  \
+	PortManager.py
 ```
 
 产物为 `dist/PortManager.exe` 单文件，直接压缩发布即可。
@@ -185,7 +191,7 @@ pyinstaller --name "PortManager" \
     --add-data "v2/icon.ico:v2/" \
     --clean \
     --noconfirm \
-    v2/main.py
+    PortManager.py
 ```
 
 打包完成后，产物在 `dist/PortManager.app`，压缩为 `PortManager-macOS-x64.zip` 发布。
@@ -207,7 +213,7 @@ pyinstaller --name "PortManager" \
     --add-data "v2/icon.ico:v2/" \
     --clean \
     --noconfirm \
-    v2/main.py
+    PortManager.py
 ```
 
 打包完成后产物在 `dist/PortManager/` 目录，运行入口为 `dist/PortManager/PortManager`。可以创建桌面快捷方式或压缩为 `PortManager-Linux-x64.tar.gz` 发布。
@@ -262,7 +268,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: |
           pyinstaller --name "PortManager" --windowed --icon "v2/icon.ico" \
-            --add-data "v2/icon.ico;v2/" --clean --noconfirm v2/main.py
+            --add-data "v2/icon.ico;v2/" --clean --noconfirm PortManager.py
       - uses: actions/upload-artifact@v4
         with:
           name: PortManager-Windows
@@ -278,7 +284,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: |
           pyinstaller --name "PortManager" --windowed --icon "v2/icon.ico" \
-            --add-data "v2/icon.ico:v2/" --clean --noconfirm v2/main.py
+            --add-data "v2/icon.ico:v2/" --clean --noconfirm PortManager.py
       - uses: actions/upload-artifact@v4
         with:
           name: PortManager-macOS
@@ -296,7 +302,7 @@ jobs:
           pip install -r requirements.txt
       - run: |
           pyinstaller --name "PortManager" --windowed --icon "v2/icon.ico" \
-            --add-data "v2/icon.ico:v2/" --clean --noconfirm v2/main.py
+            --add-data "v2/icon.ico:v2/" --clean --noconfirm PortManager.py
       - uses: actions/upload-artifact@v4
         with:
           name: PortManager-Linux
