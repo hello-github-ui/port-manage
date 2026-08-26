@@ -25,17 +25,18 @@ class FilterBar(QWidget):
     """
 
     filter_changed = pyqtSignal(dict)
+    clear_filter = pyqtSignal()
 
     _PORT_TYPE_MAP = {
-        "全部": "", "前端": "FRONTEND", "后端": "BACKEND",
+        "全部": "全部", "前端": "FRONTEND", "后端": "BACKEND",
         "数据库": "DATABASE", "其它": "OTHER",
     }
     _PROCESS_TYPE_MAP = {
-        "全部": "", "Java": "JAVA", "Node.js": "NODE", "Python": "PYTHON",
+        "全部": "全部", "Java": "JAVA", "Node.js": "NODE", "Python": "PYTHON",
         "Web服务器": "WEB_SERVER", "数据库": "DATABASE", "IDE": "IDE",
         "浏览器": "BROWSER", "系统": "SYSTEM", "其它": "OTHER",
     }
-    _PROTOCOL_MAP = {"全部": "", "TCP": "TCP", "UDP": "UDP"}
+    _PROTOCOL_MAP = {"全部": "全部", "TCP": "TCP", "UDP": "UDP"}
     _DEV_PROCESS_MAP = {"全部": None, "是": True, "否": False}
 
     def __init__(self, parent=None):
@@ -117,14 +118,18 @@ class FilterBar(QWidget):
             child.setStyleSheet(style.COMBO_BOX_STYLE())
         self.clear_btn.setStyleSheet(style.BTN_WARNING_STYLE())
 
-    def _current_filters(self) -> dict:
+    def get_filters(self) -> dict:
+        """获取当前筛选条件（公开方法）。"""
         return {
             "port_type": self._PORT_TYPE_MAP[self.port_type_box.currentText()],
             "process_type": self._PROCESS_TYPE_MAP[self.process_type_box.currentText()],
             "protocol": self._PROTOCOL_MAP[self.protocol_box.currentText()],
-            "dev_process": self._DEV_PROCESS_MAP[self.dev_process_box.currentText()],
+            "dev_only": self._DEV_PROCESS_MAP[self.dev_process_box.currentText()] is True,
             "common_port": self.common_port_box.currentData(),
         }
+
+    def _current_filters(self) -> dict:
+        return self.get_filters()
 
     def _on_filter_changed(self):
         self.filter_changed.emit(self._current_filters())
@@ -134,6 +139,7 @@ class FilterBar(QWidget):
             self._on_filter_changed()
             return
 
+        # 选择了常用端口，重置其他筛选
         for box in (self.port_type_box, self.process_type_box,
                     self.protocol_box, self.dev_process_box):
             box.blockSignals(True)
@@ -143,10 +149,12 @@ class FilterBar(QWidget):
         self.filter_changed.emit(self._current_filters())
 
     def clear_all(self):
+        """清除所有筛选，重置为默认值。"""
         for box in (self.port_type_box, self.process_type_box,
                     self.protocol_box, self.dev_process_box,
                     self.common_port_box):
             box.blockSignals(True)
             box.setCurrentIndex(0)
             box.blockSignals(False)
+        self.clear_filter.emit()
         self.filter_changed.emit(self._current_filters())

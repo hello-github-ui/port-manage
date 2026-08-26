@@ -70,3 +70,23 @@ class StatusBar(QWidget):
             self.auto_refresh_label.setText(f"🔄 {text}")
         else:
             self.auto_refresh_label.setText(text)
+
+    def show_message(self, message: str):
+        """显示状态消息，自动判断成功/错误。"""
+        success = True
+        if message.startswith("❌") or message.startswith("⏳"):
+            # 已经带前缀，直接设置文本
+            text = message
+            success = not message.startswith("❌")
+        else:
+            if "失败" in message or "错误" in message or "❌" in message:
+                success = False
+            text = message
+        self.set_status(text.lstrip("✅❌⏳ "), success=success)
+
+    def set_auto_refresh(self, enabled: bool):
+        """设置自动刷新状态。"""
+        if enabled:
+            self.auto_refresh_label.setText("🔄 自动刷新：开启 (5 秒)")
+        else:
+            self.auto_refresh_label.setText("⏸ 自动刷新：已暂停")

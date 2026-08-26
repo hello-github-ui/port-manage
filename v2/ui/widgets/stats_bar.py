@@ -80,9 +80,14 @@ class StatsBar(QWidget):
             if child.text() == "|":
                 child.setStyleSheet(f"color: {c.border}; font-size: 9pt;")
 
-    def update_stats(self, stats: dict, last_scan_time: str):
+    def update_stats(self, stats: dict, last_scan_time: str = None):
         self.total_label.setText(f"📊 总端口数：{stats.get('total', 0)}")
-        self.dev_label.setText(f"💻 开发进程：{stats.get('development_processes', 0)}")
+        self.dev_label.setText(f"💻 开发进程：{stats.get('dev', 0)}")
         self.tcp_label.setText(f"🔗 TCP：{stats.get('tcp', 0)}")
         self.udp_label.setText(f"📡 UDP：{stats.get('udp', 0)}")
-        self.scan_time_label.setText(f"⏱ 上次扫描：{last_scan_time or '--:--:--'}")
+        if last_scan_time is not None:
+            self.set_last_scan_time(last_scan_time)
+
+    def set_last_scan_time(self, time_str: str):
+        """设置上次扫描时间。"""
+        self.scan_time_label.setText(f"⏱ 上次扫描：{time_str or '--:--:--'}")

@@ -8,6 +8,9 @@
 #   顶部标题栏控件：标题 + OS 信息 + 端口总数 + 主题选择下拉框。
 # ======================================================================
 
+import platform
+import sys
+
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QSizePolicy,
                              QSpacerItem, QWidget)
@@ -54,8 +57,15 @@ class TopBar(QWidget):
         # 中间：弹簧
         layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
 
-        # 右侧信息组
-        self.os_label = QLabel("🖥 Windows")
+        # 右侧信息组：自动检测操作系统
+        os_name = platform.system()
+        if "Windows" in os_name:
+            os_icon, os_display = "🪟", "Windows"
+        elif "Darwin" in os_name:
+            os_icon, os_display = "🍎", "macOS"
+        else:
+            os_icon, os_display = "🐧", "Linux"
+        self.os_label = QLabel(f"{os_icon} {os_display}")
         self.os_label.setStyleSheet(style.INFO_LABEL_STYLE())
         layout.addWidget(self.os_label)
 
@@ -104,3 +114,7 @@ class TopBar(QWidget):
         os_icon = "🪟" if "windows" in os_type.lower() else "🍎" if "darwin" in os_type.lower() else "🐧"
         self.os_label.setText(f"{os_icon} {os_type}")
         self.port_count_label.setText(f"📊 {port_count} 个端口")
+
+    def set_port_count(self, count: int):
+        """设置端口总数显示。"""
+        self.port_count_label.setText(f"📊 {count} 个端口")

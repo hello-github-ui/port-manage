@@ -5,86 +5,207 @@
 # @File    : scan_service.py
 # @Software: PyCharm
 # @Description:
-#   扫描服务，对应 Java 版 PortScanService。
-#   职责：调用扫描器获取端口数据、维护缓存、提供查询/搜索/统计能力。
-#   当前为占位实现 —— 真实扫描器尚未接入，先用模拟数据让界面跑通。
+#   端口扫描服务层，对应 Java 版 PortScanService。
 #
-#   TODO（迁移要点）：
-#     1. 接入 scanner_factory.get_scanner() 获取真实端口
-#     2. 用 QTimer 周期触发 scan_all()（对应 @Scheduled(fixedDelay=5000)）
-#     3. 扫描放入 QThread / QProcess，避免阻塞 UI
-#     4. 缓存 key 改为 (port, pid)，修复 Java 版同端口多 PID 覆盖问题
+#   职责：
+#     1. 管理扫描缓存（self._cached_ports），UI直接读取缓存避免阻塞
+#     2. 管理后台扫描线程（ScanWorker），自动定时刷新
+#     3. 提供搜索/筛选/统计等业务逻辑
+#     4. 信号通知UI数据更新
+#
+#   缓存设计说明（对应 Java 版 ConcurrentHashMap）：
+#     - 桌面应用场景下不需要复杂的并发缓存，使用简单 List 即可
+#     - 每次后台扫描完成后全量替换缓存
+#     - UI线程只读取缓存，不直接执行系统命令
 # ======================================================================
 
-from datetime import datetime
-from typing import List
+import time
+from typing import Dict, List, Optional
+
+from PyQt5.QtCore import QObject, QTimer, pyqtSignal
 
 from v2.model.port_info import PortInfo
-from v2.utils.mock_util import generate_mock_ports
+from v2.service.scan_worker import ScanWorker
 
 
-class ScanService:
+class ScanService(QObject):
     """
-    端口扫描与数据查询服务。
+    端口扫描服务。
 
-    当前 get_all_ports() 返回模拟数据，待真实扫描器接入后替换。
-    界面层只通过本服务访问数据，不直接接触扫描器 / 模拟数据，
-    这样后续切换数据源时界面无需改动。
+    信号：
+      ports_updated(List[PortInfo]): 端口列表更新（扫描完成时发射）
+      scan_error(str):               扫描出错
+      scan_started():                扫描开始
+      scan_finished(float, int):     扫描完成（耗时秒数, 端口总数）
     """
 
-    def __init__(self):
-        # 上次扫描时间（字符串展示用）
-        self._last_scan_time: str = ""
+    ports_updated = pyqtSignal(list)
+    scan_error = pyqtSignal(str)
+    scan_started = pyqtSignal()
+    scan_finished = pyqtSignal(float, int)
 
-    def scan_all(self) -> List[PortInfo]:
-        """
-        触发一次完整扫描并刷新缓存。
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._cached_ports: List[PortInfo] = []  # 扫描缓存
+        self._scan_worker: Optional[ScanWorker] = None
+        self._auto_refresh_enabled = True
+        self._refresh_interval_ms = 5000  # 默认5秒
+        self._last_scan_time: Optional[float] = None
 
-        TODO: 调用 scanner_factory.get_scanner().scan_ports()
-        当前用模拟数据代替。
-        """
-        # TODO: ports = get_scanner().scan_ports()
-        ports = generate_mock_ports()
-        self._last_scan_time = datetime.now().strftime("%H:%M:%S")
-        return ports
+        # 自动刷新定时器（控制何时启动下一次扫描）
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.setInterval(self._refresh_interval_ms)
+        self._refresh_timer.timeout.connect(self._on_refresh_timer)
 
-    def get_all_ports(self) -> List[PortInfo]:
-        """获取全部端口（触发一次扫描）。"""
-        return self.scan_all()
+    # ------------------------------------------------------------------
+    # 公共API
+    # ------------------------------------------------------------------
 
-    def get_statistics(self, ports: List[PortInfo]) -> dict:
-        """
-        计算统计信息，返回 dict：
-          - total:                总端口数
-          - development_processes:开发进程数
-          - tcp:                  TCP 端口数
-          - udp:                  UDP 端口数
-        """
-        return {
-            "total": len(ports),
-            "development_processes": sum(1 for p in ports if p.is_development_process),
-            "tcp": sum(1 for p in ports if p.protocol.upper() == "TCP"),
-            "udp": sum(1 for p in ports if p.protocol.upper() == "UDP"),
-        }
+    def start_auto_refresh(self):
+        """启动自动刷新。立即执行一次扫描，然后按间隔定时刷新。"""
+        self._auto_refresh_enabled = True
+        if not self._refresh_timer.isActive():
+            self._refresh_timer.start()
+        # 立即扫描一次
+        self.trigger_scan()
 
-    def search_ports(self, ports: List[PortInfo], keyword: str) -> List[PortInfo]:
-        """
-        模糊搜索：匹配端口号 / PID / 进程名 / 命令行。
-        对应 Java 版 PortScanService.searchPorts。
-        """
-        if not keyword:
-            return ports
-        kw = keyword.lower()
-        result = []
-        for p in ports:
-            if (kw in str(p.port) or
-                    kw in str(p.pid) or
-                    kw in p.process_name.lower() or
-                    kw in p.command_line.lower()):
-                result.append(p)
-        return result
+    def stop_auto_refresh(self):
+        """停止自动刷新。"""
+        self._auto_refresh_enabled = False
+        self._refresh_timer.stop()
+        # 如果正在扫描，等待结束
+        if self._scan_worker and self._scan_worker.isRunning():
+            self._scan_worker.wait(2000)
+
+    def toggle_auto_refresh(self) -> bool:
+        """切换自动刷新状态，返回新状态。"""
+        if self._auto_refresh_enabled:
+            self.stop_auto_refresh()
+            return False
+        else:
+            self.start_auto_refresh()
+            return True
 
     @property
-    def last_scan_time(self) -> str:
-        """上次扫描时间（HH:MM:SS）。"""
-        return self._last_scan_time
+    def is_auto_refresh_enabled(self) -> bool:
+        return self._auto_refresh_enabled
+
+    def trigger_scan(self):
+        """触发一次手动扫描（刷新按钮点击）。"""
+        # 如果已有扫描在进行，不重复启动
+        if self._scan_worker and self._scan_worker.isRunning():
+            return
+        self._start_scan()
+
+    def get_cached_ports(self) -> List[PortInfo]:
+        """获取缓存中的端口列表（UI线程读取，快速返回）。"""
+        return list(self._cached_ports)
+
+    def search_ports(self, keyword: str, ports: List[PortInfo] = None) -> List[PortInfo]:
+        """
+        按关键字搜索端口/进程名/PID。
+        :param keyword: 搜索关键字（不区分大小写）
+        :param ports: 待搜索列表，为None时使用缓存
+        """
+        if ports is None:
+            ports = self._cached_ports
+        if not keyword:
+            return list(ports)
+
+        kw = keyword.lower().strip()
+        return [
+            p for p in ports
+            if (str(p.port) in kw or
+                kw in p.process_name.lower() or
+                str(p.pid) in kw or
+                kw in p.command_line.lower())
+        ]
+
+    def filter_ports(self,
+                     port_type: str = "全部",
+                     process_type: str = "全部",
+                     protocol: str = "全部",
+                     dev_only: bool = False,
+                     ports: List[PortInfo] = None) -> List[PortInfo]:
+        """
+        筛选端口列表。
+        """
+        if ports is None:
+            ports = self._cached_ports
+
+        result = []
+        for p in ports:
+            if port_type != "全部" and p.port_type != port_type:
+                continue
+            if process_type != "全部" and p.process_type != process_type:
+                continue
+            if protocol != "全部" and p.protocol != protocol:
+                continue
+            if dev_only and not p.is_development_process:
+                continue
+            result.append(p)
+        return result
+
+    def get_statistics(self, ports: List[PortInfo] = None) -> Dict[str, int]:
+        """
+        统计端口数据：
+          total: 总端口数
+          dev:   开发进程数
+          tcp:   TCP端口数
+          udp:   UDP端口数
+        """
+        if ports is None:
+            ports = self._cached_ports
+
+        return {
+            "total": len(ports),
+            "dev": sum(1 for p in ports if p.is_development_process),
+            "tcp": sum(1 for p in ports if p.protocol == "TCP"),
+            "udp": sum(1 for p in ports if p.protocol == "UDP"),
+        }
+
+    @property
+    def last_scan_time_str(self) -> str:
+        """上次扫描时间的格式化字符串，如 10:06:10。"""
+        if self._last_scan_time is None:
+            return "--:--:--"
+        return time.strftime("%H:%M:%S", time.localtime(self._last_scan_time))
+
+    def get_port_by_number(self, port: int) -> Optional[PortInfo]:
+        """根据端口号获取端口信息。"""
+        for p in self._cached_ports:
+            if p.port == port:
+                return p
+        return None
+
+    # ------------------------------------------------------------------
+    # 内部实现
+    # ------------------------------------------------------------------
+
+    def _start_scan(self):
+        """启动后台扫描线程。"""
+        if self._scan_worker and self._scan_worker.isRunning():
+            return
+
+        self.scan_started.emit()
+
+        self._scan_worker = ScanWorker()
+        self._scan_worker.scan_completed.connect(self._on_scan_completed)
+        self._scan_worker.scan_error.connect(self._on_scan_error)
+        self._scan_worker.start()
+
+    def _on_refresh_timer(self):
+        """定时器触发：如果自动刷新开启，执行扫描。"""
+        if self._auto_refresh_enabled:
+            self._start_scan()
+
+    def _on_scan_completed(self, ports: List[PortInfo], elapsed: float):
+        """扫描完成回调（在主线程执行，通过信号槽自动切换线程）。"""
+        self._cached_ports = ports
+        self._last_scan_time = time.time()
+        self.ports_updated.emit(list(ports))
+        self.scan_finished.emit(elapsed, len(ports))
+
+    def _on_scan_error(self, error_msg: str):
+        """扫描出错回调。"""
+        self.scan_error.emit(error_msg)

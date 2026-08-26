@@ -8,12 +8,8 @@
 #   端口 / 进程类型识别工具，对应 Java 版 PortTypeIdentifier（纯静态工具类）。
 #   提供三个识别方法，供扫描器在构造 PortInfo 时统一调用。
 #
-#   注意：Java 版 WindowsPortScanner 未调用本逻辑，导致 Windows 下
-#   port_type/process_type 为 null。本实现要求两个平台扫描器都调用，
-#   统一修复该缺陷。
-#
-#   当前为占位实现（统一返回 OTHER / False），真实判定规则以注释给出，
-#   后续按注释实现即可。
+#   跨平台说明：本模块只做字符串匹配，不依赖平台特定命令，
+#   Windows/Mac/Linux 扫描器均可安全调用。
 # ======================================================================
 
 from v2.config import settings
@@ -25,22 +21,57 @@ def identify_process_type(process_name: str, command_line: str = "") -> str:
       JAVA / NODE / PYTHON / WEB_SERVER / DATABASE /
       IDE / BROWSER / SYSTEM / OTHER
 
-    判定规则（转小写后匹配 process_name 或 process_name+command_line）：
-      JAVA       : 进程名 java；combined 含 spring/tomcat/jetty/.jar
-      NODE       : 进程名 node/npm/yarn/pnpm；combined 含 webpack/vite/next/nuxt
-      PYTHON     : 进程名 python/python3/python2；combined 含 django/flask/fastapi/uvicorn/gunicorn
-      WEB_SERVER : 进程名 nginx/httpd/apache/apache2/caddy/lighttpd
-      DATABASE   : 进程名含 mysql/postgres/redis/mongo/mongod/oracle/sqlserver/mariadb/
-                   clickhouse/elastic/cassandra/influx
-      IDE        : 进程名含 idea/intellij/pycharm/webstorm/vscode/code/eclipse/
-                   netbeans/sublime/atom/android studio
-      BROWSER    : 进程名含 chrome/firefox/safari/edge/opera/brave
-      SYSTEM     : 进程名等于 systemd/launchd/init/sshd/cupsd/cron 或含 kernel
-      OTHER      : 兜底
-
-    TODO: 按上述规则实现，当前统一返回 OTHER。
+    判定规则（转小写后匹配 process_name 或 command_line）：
     """
-    # TODO: 实现真实判定逻辑
+    name = (process_name or "").lower()
+    cmd = (command_line or "").lower()
+    combined = name + " " + cmd
+
+    # SYSTEM 系统进程（优先判断）
+    system_keywords = ["systemd", "launchd", "init", "sshd", "cupsd", "cron", "svchost",
+                       "lsass", "services", "wininit", "csrss", "smss", "winlogon"]
+    if name in system_keywords or "kernel" in name:
+        return "SYSTEM"
+
+    # DATABASE 数据库进程
+    db_keywords = ["mysql", "postgres", "redis", "mongo", "mongod", "oracle",
+                   "sqlserver", "mariadb", "clickhouse", "elastic", "cassandra",
+                   "influx", "memcached", "rabbitmq", "kafka"]
+    if any(kw in combined for kw in db_keywords):
+        return "DATABASE"
+
+    # WEB_SERVER Web服务器
+    web_keywords = ["nginx", "httpd", "apache", "apache2", "caddy", "lighttpd", "iisexpress"]
+    if any(kw in name for kw in web_keywords):
+        return "WEB_SERVER"
+
+    # IDE 开发工具
+    ide_keywords = ["idea", "intellij", "pycharm", "webstorm", "vscode", "code",
+                    "eclipse", "netbeans", "sublime", "atom", "android studio",
+                    "clion", "goland", "phpstorm", "rubymine", "datagrip", "rider"]
+    if any(kw in name for kw in ide_keywords):
+        return "IDE"
+
+    # BROWSER 浏览器
+    browser_keywords = ["chrome", "firefox", "safari", "msedge", "edge", "opera", "brave"]
+    if any(kw in name for kw in browser_keywords):
+        return "BROWSER"
+
+    # JAVA 进程
+    if "java" in name or "javaw" in name:
+        return "JAVA"
+
+    # NODE 进程
+    node_keywords = ["node", "npm", "yarn", "pnpm"]
+    if any(kw == name or name.startswith(kw + ".") or name.startswith(kw + "-") for kw in node_keywords):
+        # 排除node被包含在其他词里的情况，进一步检查命令行
+        if any(kw in name for kw in node_keywords):
+            return "NODE"
+
+    # PYTHON 进程
+    if name.startswith("python"):
+        return "PYTHON"
+
     return "OTHER"
 
 
@@ -49,25 +80,47 @@ def identify_port_type(port: int, process_name: str = "",
     """
     识别端口类型，返回以下之一：
       FRONTEND / BACKEND / DATABASE / OTHER
-
-    判定规则：
-      FRONTEND : combined 含 node/npm/yarn/webpack/vite/react/vue/angular/next/nuxt/gatsby；
-                 或端口 ∈ {3000,3001,4200,5173,8081,9000,9090}
-      BACKEND  : Java 后端(combined 含 java 且 spring/tomcat/jar/jetty)；
-                 Python 后端(combined 含 python 且 django/flask/fastapi/uvicorn/gunicorn)；
-                 Go 后端(combined 含 go 且 gin/beego/echo)；
-                 Node 后端(combined 含 node 且 express/koa/nest/fastify)；
-                 或端口 ∈ {8080,8000,8888,9527,7001,7002,5000,80,443}
-      DATABASE : combined 含 mysql/postgres/redis/mongodb/oracle/sqlserver/mariadb/
-                 clickhouse/elasticsearch；
-                 或端口 ∈ {3306,5432,6379,27017,1521,1433,9200,9300,8086,9042,33060}
-      OTHER    : 兜底
-
-    可参考 config.settings 中的 FRONTEND_PORTS / BACKEND_PORTS / DATABASE_PORTS。
-
-    TODO: 按上述规则实现，当前统一返回 OTHER。
     """
-    # TODO: 实现真实判定逻辑
+    name = (process_name or "").lower()
+    cmd = (command_line or "").lower()
+    combined = name + " " + cmd
+
+    # DATABASE: 进程名含数据库关键字 或 端口是常见数据库端口
+    db_keywords = ["mysql", "postgres", "redis", "mongo", "mongod", "oracle",
+                   "sqlserver", "mariadb", "clickhouse", "elasticsearch"]
+    db_ports = set(settings.DATABASE_PORTS.keys())
+    if any(kw in combined for kw in db_keywords) or port in db_ports:
+        return "DATABASE"
+
+    # FRONTEND: 常见前端进程关键字 或 前端常用端口
+    frontend_keywords = ["webpack", "vite", "react", "vue", "angular", "next",
+                         "nuxt", "gatsby", "svelte", "parcel", "rollup", "esbuild"]
+    frontend_ports = {3000, 3001, 4200, 5173, 5174, 8081, 9000, 9090, 8082, 8889}
+    if any(kw in combined for kw in frontend_keywords) or port in frontend_ports:
+        return "FRONTEND"
+
+    # BACKEND: 常见后端进程关键字 或 后端常用端口
+    backend_keywords_java = ["spring", "tomcat", "jetty", ".jar", "springboot"]
+    backend_keywords_python = ["django", "flask", "fastapi", "uvicorn", "gunicorn", "tornado"]
+    backend_keywords_go = ["gin", "beego", "echo", "fiber"]
+    backend_keywords_node = ["express", "koa", "nest", "fastify", "hapi"]
+    backend_ports = {8080, 8000, 8888, 9527, 7001, 7002, 5000, 80, 443, 9001, 3000}
+
+    is_backend = False
+    if "java" in name and any(kw in combined for kw in backend_keywords_java):
+        is_backend = True
+    elif name.startswith("python") and any(kw in combined for kw in backend_keywords_python):
+        is_backend = True
+    elif any(kw in combined for kw in backend_keywords_node) and "node" in name:
+        is_backend = True
+    elif port in backend_ports:
+        # 端口匹配但要排除已判定为前端/数据库的情况
+        if port not in frontend_ports and port not in db_ports:
+            is_backend = True
+
+    if is_backend:
+        return "BACKEND"
+
     return "OTHER"
 
 
@@ -77,5 +130,7 @@ def is_development_process(process_name: str, command_line: str = "") -> bool:
     命中 config.settings.DEV_PROCESS_KEYWORDS 任一关键字即为 True。
     对应 Java 版 isDevProcess。
     """
-    combined = (process_name + " " + command_line).lower()
+    name = (process_name or "").lower()
+    cmd = (command_line or "").lower()
+    combined = name + " " + cmd
     return any(kw in combined for kw in settings.DEV_PROCESS_KEYWORDS)
