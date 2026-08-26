@@ -244,7 +244,11 @@ class MainWindow(QMainWindow):
         self.scan_service.trigger_scan()
 
     def _on_auto_refresh_toggled(self, enabled: bool):
-        """自动刷新开关切换（由search_bar发出，这里只是更新状态）。"""
+        """自动刷新开关切换，实际控制scan_service的定时器。"""
+        if enabled:
+            self.scan_service.start_auto_refresh()
+        else:
+            self.scan_service.stop_auto_refresh()
         self.status_bar.set_auto_refresh(enabled)
 
     # ------------------------------------------------------------------
