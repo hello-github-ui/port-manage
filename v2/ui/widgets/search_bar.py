@@ -6,11 +6,12 @@
 # @Software: PyCharm
 # @Description:
 #   搜索栏控件：搜索框 + 搜索按钮 + 刷新按钮 + 暂停/继续自动刷新 + 批量关闭。
-#   透明背景，无白色卡片框。
+#   使用Qt内置标准图标确保播放/暂停图标正确显示。
 # ======================================================================
 
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QHBoxLayout, QLineEdit, QPushButton, QWidget
+from PyQt5.QtWidgets import (QApplication, QHBoxLayout, QLineEdit, QPushButton,
+                             QStyle, QWidget)
 
 from v2.ui import style
 
@@ -43,6 +44,9 @@ class SearchBar(QWidget):
         layout.setContentsMargins(5, 8, 5, 8)
         layout.setSpacing(12)
 
+        # 获取Qt标准样式，用于获取内置图标
+        qt_style = QApplication.style()
+
         # 搜索输入框
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("🔍 搜索端口号 / 进程名 / PID...")
@@ -65,10 +69,12 @@ class SearchBar(QWidget):
         self.refresh_btn.clicked.connect(self.refresh_requested.emit)
         layout.addWidget(self.refresh_btn)
 
-        # 暂停/继续自动刷新按钮
-        self.auto_refresh_btn = QPushButton("⏸ 暂停自动刷新")
+        # 暂停/继续自动刷新按钮 - 使用Qt内置标准图标
+        self.auto_refresh_btn = QPushButton(" 暂停自动刷新")
         self.auto_refresh_btn.setMinimumWidth(145)
         self.auto_refresh_btn.setStyleSheet(style.BTN_DEFAULT_STYLE())
+        # 设置暂停图标 (SP_MediaPause = 29)
+        self.auto_refresh_btn.setIcon(qt_style.standardIcon(QStyle.SP_MediaPause))
         self.auto_refresh_btn.clicked.connect(self._on_auto_refresh_toggled)
         layout.addWidget(self.auto_refresh_btn)
 
@@ -87,10 +93,13 @@ class SearchBar(QWidget):
 
     def _on_auto_refresh_toggled(self):
         self._auto_refresh_active = not self._auto_refresh_active
+        qt_style = QApplication.style()
         if self._auto_refresh_active:
-            self.auto_refresh_btn.setText("⏸ 暂停自动刷新")
+            self.auto_refresh_btn.setText(" 暂停自动刷新")
+            self.auto_refresh_btn.setIcon(qt_style.standardIcon(QStyle.SP_MediaPause))
         else:
-            self.auto_refresh_btn.setText("▶️ 继续自动刷新")
+            self.auto_refresh_btn.setText(" 继续自动刷新")
+            self.auto_refresh_btn.setIcon(qt_style.standardIcon(QStyle.SP_MediaPlay))
         self.auto_refresh_toggled.emit(self._auto_refresh_active)
 
     def apply_theme(self):
