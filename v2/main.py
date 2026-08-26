@@ -7,16 +7,33 @@
 # @Description:
 #   应用入口。负责初始化 QApplication、应用全局样式、设置图标、显示主窗口。
 #   Windows下设置AppUserModelID以确保任务栏图标正确显示。
+#   兼容PyInstaller打包后的资源路径。
 # ======================================================================
 
 import ctypes
 import os
 import sys
 
-# 兜底：把项目根目录加入 sys.path
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if _PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, _PROJECT_ROOT)
+
+def get_resource_path(relative_path: str) -> str:
+    """
+    获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境。
+    PyInstaller打包后，临时解压目录在 sys._MEIPASS 中。
+    """
+    # PyInstaller打包后的临时目录
+    if hasattr(sys, '_MEIPASS'):
+        base_path = sys._MEIPASS
+    else:
+        # 开发环境：main.py在v2/目录下
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
+
+# 兜底：把项目根目录加入 sys.path（开发环境需要）
+if not hasattr(sys, '_MEIPASS'):
+    _PROJECT_ROOT = os.path.dirname(get_resource_path(""))
+    if _PROJECT_ROOT not in sys.path:
+        sys.path.insert(0, _PROJECT_ROOT)
 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
@@ -43,8 +60,7 @@ def set_windows_app_id():
 
 def get_icon_path():
     """获取图标文件的绝对路径。"""
-    # main.py在v2/目录下，icon.ico也在v2/目录下
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icon.ico")
+    icon_path = get_resource_path("icon.ico")
     if os.path.exists(icon_path):
         return icon_path
     return None

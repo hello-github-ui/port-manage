@@ -1,15 +1,15 @@
-# Port Manage 🚀
+# Port Manage v2 🚀
 
 <div align="center">
 
-**功能强大的端口管理工具 | 支持 macOS & Windows**
+**跨平台桌面端口管理工具 | 支持 Windows / macOS / Linux**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Java](https://img.shields.io/badge/Java-11+-orange.svg)](https://adoptium.net/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.7.18-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/panris/port-manage)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![PyQt5](https://img.shields.io/badge/PyQt5-5.15+-green.svg)](https://pypi.org/project/PyQt5/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](#)
 
-[功能特性](#-功能特性) • [快速开始](#-快速开始) • [使用说明](#-使用说明) • [技术栈](#-技术栈) • [开发指南](#-开发指南)
+[功能特性](#-功能特性) • [快速开始](#-快速开始) • [打包发布](#-打包发布) • [技术架构](#-技术架构)
 
 </div>
 
@@ -17,17 +17,20 @@
 
 ## 📖 项目简介
 
-Port Manage 是一个基于Web的端口管理工具，帮助开发者快速查看、管理本地端口占用情况。支持一键关闭进程、批量操作、永久停止系统服务等功能。
+Port Manage v2 是一个基于 **Python + PyQt5** 开发的跨平台桌面端口管理工具，帮助开发者快速查看、管理本地端口占用情况。无需浏览器，双击即可使用，支持一键关闭进程、批量操作、永久停止系统服务等功能。
 
-### 🎯 为什么选择 Port Manage？
+> **v2 重构说明**：从原 Java Spring Boot Web 版本重构为原生桌面应用，启动更快、界面更流畅、无需安装Java环境、不占用Web端口。
 
-- ✨ **零配置** - 双击启动脚本，无需任何设置
-- 🚀 **全自动** - 自动检测环境、自动打开浏览器
-- 🌍 **全中文** - 完整的中文界面和文档
-- 🎨 **现代化UI** - 响应式设计，支持浅色/深色主题
+### 🎯 核心优势
+
+- ⚡ **原生桌面应用** - 双击启动，无需浏览器，秒开
+- 🖥️ **跨平台支持** - 完美支持 Windows / macOS / Linux
+- 🎨 **5种主题配色** - 浅色、深色、蓝色、绿色、紫色，护眼舒适
 - 🧠 **智能识别** - 自动识别进程类型（数据库、Web服务器、开发工具等）
-- 💪 **功能强大** - 支持批量操作、永久停止系统服务
-- 🔒 **安全可靠** - 明确的操作提示，支持优雅退出
+- 💪 **功能强大** - 单个关闭、批量关闭、永久停止系统服务
+- 🔍 **多维筛选** - 端口类型、进程类型、协议、开发进程、常用端口
+- 🔄 **自动刷新** - 5秒自动扫描，支持暂停/继续
+- 🚫 **零依赖运行** - 打包后单文件/单目录可执行，无需Python环境
 
 ---
 
@@ -37,375 +40,362 @@ Port Manage 是一个基于Web的端口管理工具，帮助开发者快速查�
 
 | 功能 | 说明 |
 |------|------|
-| 📊 **实时监控** | 自动扫描所有端口占用情况，实时更新 |
-| 🔍 **多维筛选** | 支持按端口类型、进程类型、协议、开发进程等多维度筛选 |
-| ❌ **一键关闭** | 单击关闭任意进程，支持确认提示 |
-| 📦 **批量操作** | 勾选多个端口，一次性批量关闭 |
-| 🛑 **永久停止** | 智能识别系统服务，支持永久停止（不自动重启） |
-| 🔄 **自动刷新** | 可配置自动刷新间隔，实时监控端口变化 |
-| 🌓 **主题切换** | 支持浅色/深色主题，护眼舒适 |
-| 🔎 **快速搜索** | 支持按端口号、进程名、PID搜索 |
+| 📊 **实时端口扫描** | 后台线程扫描所有监听端口，不阻塞UI |
+| 🔍 **快速搜索** | 支持端口号、进程名、PID、命令行搜索，回车即搜，一键清空 |
+| 🎯 **多维筛选** | 端口类型/进程类型/协议(TCP/UDP)/开发进程/常用端口 |
+| ❌ **一键关闭** | 点击关闭按钮，危险进程红色警告提示 |
+| 📦 **批量关闭** | 全选/多选端口，一次性批量关闭 |
+| 🛑 **永久停止** | 自动识别系统服务，支持永久停止并禁用开机自启 |
+| ⏸️ **自动刷新控制** | 5秒自动刷新，支持暂停/继续切换 |
+| 🎨 **主题切换** | 5种配色主题实时切换，无白色边框卡片 |
+| ☑️ **全选复选框** | 两态全选（全选/取消全选），完美对齐 |
+| 📈 **实时统计** | 总端口数/开发进程/TCP/UDP实时统计 |
 
-### 智能识别
+### 智能进程识别
 
-Port Manage 能够自动识别以下进程类型：
+自动识别以下进程类型并标记：
+- **数据库**: MySQL, Redis, PostgreSQL, MongoDB, SQL Server 等
+- **Web服务器**: Nginx, Apache, Tomcat, IIS 等
+- **开发工具**: Node.js, Python, Java, Go, Rust 等开发服务
+- **IDE**: VSCode, PyCharm, IntelliJ IDEA, WebStorm 等
+- **浏览器**: Chrome, Firefox, Edge, Safari 等
+- **系统进程**: svchost, System, launchd 等系统关键进程
 
-- **开发工具**: Node.js, Python, Java, Go, PHP等
-- **数据库服务**: MySQL, Redis, PostgreSQL, MongoDB等
-- **Web服务器**: Nginx, Apache, Tomcat等
-- **IDE工具**: VSCode, IntelliJ IDEA, WebStorm等
-- **浏览器**: Chrome, Firefox, Safari等
-- **系统进程**: 自动标记系统管理的进程
+### 跨平台进程管理
 
-### 筛选功能
-
-- **端口类型**: 前端(3000-4999)、后端(8000-9999)、数据库(3306,5432,6379等)
-- **进程类型**: Java、Node、Python、数据库、Web服务器等
-- **协议类型**: TCP、UDP
-- **开发进程**: 自动识别开发相关进程
-- **常用端口**: 快速定位常见服务端口
+| 平台 | 临时关闭 | 永久停止系统服务 |
+|------|---------|----------------|
+| **Windows** | `taskkill /F /PID` | `sc stop` + `sc config` + PowerShell `Get-CimInstance` |
+| **macOS** | `kill -9` | `brew services stop` + `launchctl unload` |
+| **Linux** | `kill -9` | `systemctl stop` + `systemctl disable` |
 
 ---
 
 ## 🚀 快速开始
 
-### 系统要求
+### 方式一：下载发布包（推荐普通用户）
 
-- **Java**: 11 或更高版本
-- **系统**: macOS 10.15+ 或 Windows 10+
-- **端口**: 9527 端口可用
+1. 从 [Releases](https://github.com/hello-github-ui/port-manage/releases) 下载对应平台的发布包
+2. 解压后直接运行可执行文件：
+   - **Windows**: 双击 `PortManager.exe`
+   - **macOS**: 双击 `PortManager.app`（首次运行右键→打开）
+   - **Linux**: 运行 `./PortManager`
 
-### 安装 Java（如果未安装）
+### 方式二：从源码运行（开发者）
 
-#### macOS
-```bash
-brew install openjdk@11
-```
+#### 环境要求
 
-#### Windows
-访问 [Adoptium](https://adoptium.net/) 下载并安装
+- **Python**: 3.8 或更高版本
+- **操作系统**: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+ 等)
 
----
-
-### 📥 下载与启动
-
-#### 方式1: 下载发布包（推荐）
-
-1. 从 [Releases](https://github.com/panris/port-manage/releases) 下载最新版本
-2. 解压 `PortManager-v1.0.0-All.zip`
-3. 根据系统选择启动方式：
-
-**macOS 用户**
-```bash
-双击 PortManager.command
-```
-
-首次运行可能需要：
-- 右键点击 → 选择"打开"
-- 或在终端运行: `chmod +x PortManager.command && ./PortManager.command`
-
-**Windows 用户**
-```bash
-双击 PortManager.bat
-```
-
-如有安全提示，点击"仍要运行"
-
-4. ✨ 浏览器自动打开管理页面: http://localhost:9527
-
----
-
-#### 方式2: 从源码运行
+#### 安装依赖
 
 ```bash
 # 克隆项目
-git clone https://github.com/panris/port-manage.git
-cd port-manage/port-manage-web
+git clone https://github.com/hello-github-ui/port-manage.git
+cd port-manage
 
-# Maven构建
-mvn clean package
-
-# 启动应用
-java -jar target/port-manage-web.jar
+# 安装依赖
+pip install -r requirements.txt
 ```
 
-访问: http://localhost:9527
+#### 运行应用
+
+```bash
+# 方式1：模块方式运行（推荐）
+python -m v2.main
+
+# 方式2：直接运行入口文件
+python v2/main.py
+```
+
+启动后即可看到端口管理工具主界面。
+
+---
+
+## 📦 打包发布
+
+使用 **PyInstaller** 将Python应用打包为各平台原生可执行文件。
+
+### 通用准备工作
+
+**重要：必须在目标操作系统上打包对应平台的版本！** PyInstaller不支持交叉编译（例如不能在Windows上打包macOS版本）。
+
+```bash
+# 1. 确保安装了最新依赖
+pip install -r requirements.txt
+pip install pyinstaller>=6.0.0
+
+# 2. 验证应用可以正常运行
+python -m v2.main
+```
+
+---
+
+### Windows 打包
+
+#### 打包为单目录（推荐，启动快）
+
+```powershell
+# 在项目根目录执行
+pyinstaller --name "PortManager" `
+    --windowed `
+    --icon "v2/icon.ico" `
+    --add-data "v2/icon.ico;v2/" `
+    --clean `
+    --noconfirm `
+    v2/main.py
+```
+
+打包完成后，产物在 `dist/PortManager/` 目录下，整个目录压缩为 `PortManager-Windows-x64.zip` 即可发布。
+
+#### 打包为单文件（分发方便，启动稍慢）
+
+```powershell
+pyinstaller --name "PortManager" `
+    --onefile `
+    --windowed `
+    --icon "v2/icon.ico" `
+    --add-data "v2/icon.ico;v2/" `
+    --clean `
+    --noconfirm `
+    v2/main.py
+```
+
+产物为 `dist/PortManager.exe` 单文件，直接压缩发布即可。
+
+---
+
+### macOS 打包
+
+#### 准备工作
+
+```bash
+# 如果没有图标，先生成 .icns 图标（可选，或直接使用icon.ico）
+# 确保安装了 pyinstaller
+pip install pyinstaller
+```
+
+#### 打包为 .app（单目录）
+
+```bash
+pyinstaller --name "PortManager" \
+    --windowed \
+    --icon "v2/icon.ico" \
+    --add-data "v2/icon.ico:v2/" \
+    --clean \
+    --noconfirm \
+    v2/main.py
+```
+
+打包完成后，产物在 `dist/PortManager.app`，压缩为 `PortManager-macOS-x64.zip` 发布。
+
+> **注意**：macOS 用户首次打开可能提示"无法验证开发者"，解决方法：
+> 1. 右键点击 `PortManager.app` → 选择「打开」
+> 2. 或在终端执行：`xattr -cr /Applications/PortManager.app`
+
+---
+
+### Linux 打包
+
+#### 打包为单目录
+
+```bash
+pyinstaller --name "PortManager" \
+    --windowed \
+    --icon "v2/icon.ico" \
+    --add-data "v2/icon.ico:v2/" \
+    --clean \
+    --noconfirm \
+    v2/main.py
+```
+
+打包完成后产物在 `dist/PortManager/` 目录，运行入口为 `dist/PortManager/PortManager`。可以创建桌面快捷方式或压缩为 `PortManager-Linux-x64.tar.gz` 发布。
+
+```bash
+# 赋予执行权限
+chmod +x dist/PortManager/PortManager
+
+# 压缩发布
+cd dist
+tar -czf ../PortManager-Linux-x64.tar.gz PortManager/
+cd ..
+```
+
+---
+
+### PyInstaller 常用参数说明
+
+| 参数 | 说明 |
+|------|------|
+| `--name "PortManager"` | 输出的应用名称 |
+| `--windowed` / `-w` | GUI程序，不显示控制台黑窗口（Windows/macOS） |
+| `--onefile` / `-F` | 打包为单个可执行文件（不指定则为单目录） |
+| `--icon <path>` | 设置应用图标 |
+| `--add-data "源;目标"` | 添加数据文件（Windows用`;`分隔，macOS/Linux用`:`分隔） |
+| `--clean` | 打包前清理临时文件 |
+| `--noconfirm` | 覆盖输出目录不询问 |
+| `--debug all` | 调试用，显示控制台输出（排查打包问题时使用） |
+
+---
+
+### 🤖 GitHub Actions 自动构建（可选）
+
+如果需要配置CI自动构建，可以创建 `.github/workflows/build.yml`，在三个平台分别打包：
+
+```yaml
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: |
+          pyinstaller --name "PortManager" --windowed --icon "v2/icon.ico" \
+            --add-data "v2/icon.ico;v2/" --clean --noconfirm v2/main.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PortManager-Windows
+          path: dist/PortManager/
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: |
+          pyinstaller --name "PortManager" --windowed --icon "v2/icon.ico" \
+            --add-data "v2/icon.ico:v2/" --clean --noconfirm v2/main.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PortManager-macOS
+          path: dist/PortManager.app
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          sudo apt-get update && sudo apt-get install -y libxcb-xinerama0 libxcb-cursor0
+          pip install -r requirements.txt
+      - run: |
+          pyinstaller --name "PortManager" --windowed --icon "v2/icon.ico" \
+            --add-data "v2/icon.ico:v2/" --clean --noconfirm v2/main.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PortManager-Linux
+          path: dist/PortManager/
+```
+
+手动上传发布时，只需在本地对应平台打包，将生成的 `dist` 目录压缩后上传到 GitHub Releases 即可。
+
+---
+
+## 🏗️ 技术架构
+
+### 分层架构设计
+
+```
+v2/
+├── main.py                 # 应用入口（QApplication初始化、图标设置）
+├── icon.ico                # 应用图标
+├── config/
+│   └── settings.py         # 配置常量（常用端口、端口范围等）
+├── model/
+│   ├── port_info.py        # PortInfo数据模型
+│   └── process_info.py     # ProcessInfo数据模型
+├── scanner/                # 端口扫描层（平台相关）
+│   ├── port_scanner.py     # 扫描器抽象基类
+│   ├── scanner_factory.py  # 扫描器工厂（自动选择当前平台实现）
+│   ├── windows_scanner.py  # Windows: netstat + tasklist + PowerShell
+│   └── mac_scanner.py      # macOS/Linux: lsof + ps
+├── service/                # 业务服务层
+│   ├── scan_service.py     # 扫描服务（缓存、自动刷新、搜索、筛选、统计）
+│   ├── scan_worker.py      # QThread后台扫描线程（不阻塞UI）
+│   └── process_service.py  # 进程管理服务（kill、批量kill、系统服务停止）
+├── utils/
+│   ├── cmd_util.py         # 跨平台命令执行工具（编码处理、隐藏窗口）
+│   └── port_type_identifier.py  # 进程/端口类型智能识别
+└── ui/                     # UI表现层
+    ├── style.py            # 主题配色系统（5种主题QSS）
+    ├── main_window.py      # 主窗口（信号槽连接、业务逻辑对接）
+    └── widgets/            # 独立UI控件
+        ├── top_bar.py      # 顶部栏（标题、平台标识、主题切换）
+        ├── search_bar.py   # 搜索栏（搜索框、刷新、暂停自动刷新、批量关闭）
+        ├── filter_bar.py   # 筛选栏（5个筛选下拉框）
+        ├── stats_bar.py    # 统计栏（端口数统计、上次扫描时间）
+        ├── port_table.py   # 端口表格（自定义复选框表头、居中复选框）
+        └── status_bar.py   # 状态栏（操作反馈、自动刷新状态）
+```
+
+### 核心技术栈
+
+- **GUI框架**: PyQt5 5.15+
+- **后端扫描**: 系统原生命令调用
+  - Windows: `netstat -ano` + `tasklist` + PowerShell `Get-CimInstance`
+  - macOS/Linux: `lsof -nP -iTCP -sTCP:LISTEN` + `lsof -nP -iUDP` + `ps -eo`
+- **多线程**: QThread 后台扫描，pyqtSignal 信号通知UI更新
+- **打包工具**: PyInstaller 6.0+
+- **缓存设计**: 桌面场景使用简单内存List，后台扫描完成全量替换，无需复杂并发缓存
 
 ---
 
 ## 📱 使用说明
 
-### 主界面功能
+### 基本操作
 
-#### 1. 查看端口列表
-启动后自动扫描并显示所有占用的端口，包括：
-- 端口号
-- 协议 (TCP/UDP)
-- PID (进程ID)
-- 进程名称
-- 端口类型（前端/后端/数据库/其他）
-- 进程类型（Java/Node/Python等）
-- 是否为开发进程
+1. **启动应用**：双击启动后自动开始首次扫描
+2. **搜索端口**：在搜索框输入端口号/进程名/PID，按回车搜索，点击×清空恢复显示全部
+3. **筛选**：使用筛选栏下拉框按条件筛选端口
+4. **关闭单个进程**：点击对应行右侧红色「关闭」按钮
+5. **批量关闭**：勾选多个端口（或点左上角全选），点击顶部「关闭选中」按钮
+6. **永久停止服务**：关闭系统服务进程时，对话框会显示「永久停止服务并禁用自启」选项
+7. **自动刷新**：默认5秒自动刷新，点击「暂停/继续自动刷新」按钮控制
+8. **切换主题**：右上角主题下拉框，支持浅色/深色/蓝色/绿色/紫色5种主题
 
-#### 2. 筛选端口
-使用顶部筛选栏快速定位：
-```
-端口类型 → 进程类型 → 协议 → 开发进程 → 常用端口
-```
+### 典型使用场景
 
-#### 3. 搜索功能
-在搜索框输入：
-- 端口号（如：3000）
-- 进程名（如：mysql）
-- PID（如：12345）
-
-#### 4. 关闭单个进程
-1. 找到要关闭的进程
-2. 点击"关闭"按钮
-3. 选择关闭方式：
-   - **临时关闭**: 仅关闭进程（可能自动重启）
-   - **永久停止**: 停止系统服务（不会重启，推荐用于数据库等）
-4. 确认操作
-
-#### 5. 批量关闭
-1. 勾选要关闭的端口（可使用全选）
-2. 点击"关闭选中 (N)"按钮
-3. 确认端口列表
-4. 选择关闭方式（临时/永久）
-5. 确认批量关闭
-
----
-
-## 🎯 使用场景
-
-### 场景1: 清理开发环境
-```
-筛选"开发进程: 是" → 全选 → 批量关闭
-```
-一次性关闭所有开发服务器、构建工具
-
-### 场景2: 停止数据库服务
-```
-筛选"进程类型: DATABASE" → 选择目标 → 永久停止
-```
-MySQL、Redis、PostgreSQL等一键永久停止
-
-### 场景3: 释放被占用的端口
-```
-搜索端口号 → 查看占用进程 → 关闭
-```
-快速定位并释放需要的端口
-
-### 场景4: 批量清理指定端口范围
-```
-手动勾选8000-9000范围端口 → 批量关闭
-```
-清理开发测试中的临时服务
-
----
-
-## 🛠️ 技术栈
-
-### 后端
-- **框架**: Spring Boot 2.7.18
-- **语言**: Java 11
-- **构建工具**: Maven
-- **端口扫描**: lsof (macOS) / netstat (Windows)
-- **进程管理**: kill/brew services (macOS) / taskkill (Windows)
-
-### 前端
-- **语言**: 原生 JavaScript (ES6+)
-- **样式**: CSS3 (CSS Custom Properties)
-- **布局**: Flexbox + Grid
-- **主题**: 支持浅色/深色模式
-
-### 特性
-- 响应式设计，支持移动端
-- RESTful API 架构
-- 自动刷新机制
-- 错误处理和友好提示
-- 跨平台支持
-
----
-
-## 📚 API 文档
-
-### 获取所有端口
-```http
-GET /api/ports
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "port": 3306,
-      "protocol": "tcp",
-      "pid": 24883,
-      "processName": "mysqld",
-      "portType": "DATABASE",
-      "processType": "DATABASE",
-      "isDevelopmentProcess": false
-    }
-  ],
-  "count": 1
-}
-```
-
-### 关闭进程
-```http
-DELETE /api/process/{pid}?permanent=false
-```
-
-### 批量关闭
-```http
-DELETE /api/process/batch
-Content-Type: application/json
-
-{
-  "pids": [24883, 21176],
-  "permanent": true
-}
-```
-
-### 触发扫描
-```http
-POST /api/scan
-```
-
-更多API详情请参考代码中的 `PortController.java`
-
----
-
-## 🔧 开发指南
-
-### 项目结构
-
-```
-port-manage-web/
-├── src/
-│   ├── main/
-│   │   ├── java/com/portmanage/web/
-│   │   │   ├── controller/         # REST API控制器
-│   │   │   ├── service/            # 业务逻辑服务
-│   │   │   ├── scanner/            # 端口扫描实现
-│   │   │   ├── model/              # 数据模型
-│   │   │   └── config/             # 配置类
-│   │   └── resources/
-│   │       ├── static/             # 前端资源
-│   │       │   ├── index.html
-│   │       │   ├── css/style.css
-│   │       │   └── js/app.js
-│   │       └── application.yml     # Spring Boot配置
-├── release/                        # 发布包
-├── scripts/                        # 启动脚本
-├── docs/                          # 文档
-└── pom.xml                        # Maven配置
-```
-
-### 本地开发
-
-1. **克隆项目**
-```bash
-git clone https://github.com/panris/port-manage.git
-cd port-manage/port-manage-web
-```
-
-2. **编译运行**
-```bash
-# 编译
-mvn clean package
-
-# 运行
-java -jar target/port-manage-web.jar
-
-# 或使用Maven插件
-mvn spring-boot:run
-```
-
-3. **访问应用**
-```
-http://localhost:9527
-```
-
-### 修改端口
-
-在 `application.yml` 中修改：
-```yaml
-server:
-  port: 9527  # 改为你需要的端口
-```
-
-或通过命令行参数：
-```bash
-java -jar port-manage-web.jar --server.port=8080
-```
-
----
-
-## 📖 文档
-
-项目包含完整的功能文档：
-
-- [系统服务管理指南](SYSTEM_SERVICES.md) - launchd/Homebrew服务管理
-- [永久停止功能说明](PERMANENT_STOP_GUIDE.md) - 如何永久停止系统服务
-- [批量关闭功能指南](BATCH_KILL_GUIDE.md) - 批量操作详细说明
-
----
-
-## 🤝 贡献指南
-
-欢迎贡献代码、报告Bug、提出新功能建议！
-
-### 如何贡献
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 提交 Pull Request
-
-### 报告问题
-
-如果你发现了Bug或有功能建议，请[创建Issue](https://github.com/panris/port-manage/issues)。
-
----
-
-## 📋 待办事项
-
-- [ ] 支持 Linux 系统
-- [ ] 添加端口占用历史记录
-- [ ] 支持导出端口列表
-- [ ] 添加进程详细信息查看
-- [ ] 支持自定义端口类型规则
-- [ ] 添加键盘快捷键支持
-- [ ] 国际化支持（英文界面）
-- [ ] Docker镜像支持
+| 场景 | 操作 |
+|------|------|
+| 清理开发环境 | 筛选「开发进程: 是」→ 全选 → 批量关闭 |
+| 释放占用端口 | 搜索端口号 → 查看占用进程 → 关闭 |
+| 停止数据库 | 筛选「进程类型: DATABASE」→ 选择目标 → 永久停止 |
+| 查看TCP/UDP分布 | 统计栏实时显示TCP/UDP数量 |
 
 ---
 
 ## ❓ 常见问题
 
-### Q1: 提示"未检测到Java环境"？
-**A**: 请安装Java 11或更高版本。
-- Mac: `brew install openjdk@11`
-- Windows: 访问 https://adoptium.net/
+### Q1: 为什么Notepad++/记事本等程序没有显示？
+**A**: 这是端口管理工具，只显示**正在监听/占用网络端口**的进程。普通文本编辑器等不监听网络端口的程序不会显示——这是正确的设计。
 
-### Q2: 端口9527被占用？
-**A**: 启动脚本会提示是否关闭占用进程，或修改配置文件使用其他端口。
+### Q2: 打包后运行提示缺少模块？
+**A**: 可以尝试添加 `--hidden-import=模块名` 参数到PyInstaller命令，或使用 `--debug all` 参数运行查看具体缺失的模块。
 
-### Q3: 关闭进程后又重新出现？
-**A**: 这是系统管理的服务（如MySQL、Redis）会自动重启。请使用"永久停止"选项。
+### Q3: Windows打包后杀毒软件报毒？
+**A**: PyInstaller打包的Python程序可能被误报，添加信任或使用代码签名证书即可。
 
-### Q4: Mac提示"无法打开未验证的开发者"？
-**A**: 右键点击启动脚本 → 选择"打开"，或在终端运行。
+### Q4: macOS提示"无法打开，因为无法验证开发者"？
+**A**: 右键点击应用 → 选择「打开」，或在终端执行：`sudo xattr -cr /Applications/PortManager.app`。
 
-### Q5: Windows Defender 报毒？
-**A**: 这是误报。启动脚本仅用于启动Java应用，无任何恶意代码。
-
-更多问题请查看 [Issues](https://github.com/panris/port-manage/issues)。
+### Q5: Linux下启动报错缺少xcb库？
+**A**: 安装Qt运行依赖：`sudo apt-get install libxcb-xinerama0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-xkb1 libxkbcommon-x11-0`。
 
 ---
 
@@ -415,31 +405,8 @@ java -jar port-manage-web.jar --server.port=8080
 
 ---
 
-## 👤 作者
-
-**panris.pan**
-
-- GitHub: [@panris](https://github.com/panris)
-
----
-
-## 🌟 Star History
-
-如果这个项目对你有帮助，请给它一个 ⭐️ Star！
-
----
-
-## 📮 联系方式
-
-- 提交 Issue: [GitHub Issues](https://github.com/panris/port-manage/issues)
-- Pull Request: [GitHub Pull Requests](https://github.com/panris/port-manage/pulls)
-
----
-
 <div align="center">
 
-**[⬆ 回到顶部](#port-manage-)**
-
-Made with ❤️ by [panris.pan](https://github.com/panris)
+Made with ❤️ using Python & PyQt5
 
 </div>
