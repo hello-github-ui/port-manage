@@ -5,65 +5,84 @@
 # @File    : port_table.py
 # @Software: PyCharm
 # @Description:
-#   端口表格控件：QTableView + PortTableModel。
-#   对应 Java 前端 Table 区块。
-#   功能：
-#     - 表头第 0 列显示全选复选框（QCheckBox 注入表头）
-#     - 每行操作列注入「关闭」按钮（setIndexWidget）
-#     - 勾选数量变化时发出 selection_changed，供主窗口更新批量按钮
-#     - 关闭按钮点击发出 kill_requested(PortInfo)
-#
-#   修复要点：
-#     - 表头第 0 列通过 setIndexWidget 注入 QCheckBox 作为全选控件
-#     - 用 QCheckBox 三态（checked/unchecked/partially-checked）反映整体勾选状态
-#     - 不用 model.dataChanged 跟踪勾选，改用自定义视图的 mousePressEvent
+#   端口表格控件：使用 QTableWidget 实现。
+#   - 表头第一列使用真实 QCheckBox 控件实现全选/全不选
+#   - 每一行第一列也是真实 QCheckBox 控件，确保对齐准确
+#   - 勾选复选框后整行高亮显示
+#   - 最后一列是「关闭」按钮
 # ======================================================================
 
-from PyQt5.QtCore import (pyqtSignal, QEvent, QItemSelectionModel,
-                          QModelIndex, Qt)
-from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtWidgets import (QAbstractItemView, QCheckBox, QHeaderView,
-                             QHBoxLayout, QPushButton, QTableView, QWidget)
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtWidgets import (QAbstractItemView, QCheckBox, QHBoxLayout,
+                             QHeaderView, QPushButton, QTableWidget,
+                             QTableWidgetItem, QWidget)
 
 from v2.model.port_info import PortInfo
-from v2.model.table_model import PortTableModel
 from v2.ui import style
 
 
-class _PortTableView(QTableView):
-    """
-    自定义 QTableView 子类。
+class _CheckBoxHeaderView(QHeaderView):
+    """带全选复选框的自定义表头视图（两态模式）。"""
 
-    重写 mousePressEvent 来检测复选框列的点击，避免依赖 model.dataChanged
-    （模型 reset 时 dataChanged 会被误触发，导致行消失等异常）。
-    """
+    select_all_clicked = pyqtSignal(bool)
 
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self._on_checkbox_toggled = None
+        super().__init__(Qt.Horizontal, parent)
+        self._check_box = QCheckBox(self)
+        self._check_box.setTristate(False)
+        self._check_box.setStyleSheet(style.CHECKBOX_STYLE())
+        self._check_box.stateChanged.connect(self._on_state_changed)
+        self._is_updating = False
 
-    def mousePressEvent(self, event: QMouseEvent):
-        """
-        鼠标按下事件。检测是否点击在复选框列（COL_CHECK=0）上，
-        若是则在父类处理后：
-          1. 通知外部更新选中数
-          2. 选中该行，使其出现选中高亮效果
-        """
-        index = self.indexAt(event.pos())
-        if index.isValid() and index.column() == PortTableModel.COL_CHECK:
-            # 先让父类正常处理（切换勾选状态）
-            super().mousePressEvent(event)
-            # 关键：选中该行，触发整行高亮视觉效果
-            # ClearAndSelect 确保只有这一行被选中
-            self.selectionModel().select(
-                index,
-                QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
-            )
-            # 通知外部更新选中数
-            if self._on_checkbox_toggled:
-                self._on_checkbox_toggled()
-        else:
-            super().mousePressEvent(event)
+    def _on_state_changed(self, state: int):
+        if self._is_updating:
+            return
+        self.select_all_clicked.emit(state == Qt.Checked)
+
+    def set_checked(self, checked: bool):
+        self._is_updating = True
+        self._check_box.setChecked(checked)
+        self._is_updating = False
+
+    def apply_theme(self):
+        self._check_box.setStyleSheet(style.CHECKBOX_STYLE())
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._update_checkbox_position()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_checkbox_position()
+
+    def paintSection(self, painter, rect, logicalIndex):
+        super().paintSection(painter, rect, logicalIndex)
+        if logicalIndex == 0:
+            self._update_checkbox_position()
+
+    def _update_checkbox_position(self):
+        section_width = self.sectionSize(0)
+        header_height = self.height()
+        checkbox_size = self._check_box.sizeHint()
+
+        x = self.sectionViewportPosition(0) + (section_width - checkbox_size.width()) // 2
+        y = (header_height - checkbox_size.height()) // 2
+
+        self._check_box.move(x, y)
+        self._check_box.raise_()
+
+
+class _CenteredWidget(QWidget):
+    """通用居中容器：将子控件居中显示在单元格内，透明背景。"""
+
+    def __init__(self, child_widget, parent=None, margins=(4, 2, 4, 2)):
+        super().__init__(parent)
+        # 设置透明背景，避免在深色主题下出现白色块导致的阴影/错位感
+        self.setStyleSheet("background: transparent;")
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(*margins)
+        layout.setAlignment(Qt.AlignCenter)
+        layout.addWidget(child_widget)
 
 
 class PortTable(QWidget):
@@ -80,200 +99,168 @@ class PortTable(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._ports = []
+        self._row_checkboxes = []
+        self._kill_buttons = []
         self._init_ui()
 
     def _init_ui(self):
-        """构建表格视图与基础配置。"""
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # 数据模型
-        self.model = PortTableModel()
+        self.table = QTableWidget()
+        self.table.setColumnCount(11)
 
-        # 自定义表格视图
-        self.view = _PortTableView()
-        self.view.setModel(self.model)
+        headers = [
+            "", "端口", "类型", "协议", "状态", "PID",
+            "进程名", "命令行", "用户", "开发进程", "操作",
+        ]
+        self.table.setHorizontalHeaderLabels(headers)
 
-        # 选中行为
-        self.view.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.view.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.view.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._header = _CheckBoxHeaderView()
+        self.table.setHorizontalHeader(self._header)
+        self._header.select_all_clicked.connect(self._on_select_all_clicked)
 
-        # 显式设置选中背景色
-        from PyQt5.QtGui import QColor, QPalette
-        palette = self.view.palette()
-        palette.setColor(QPalette.Highlight, QColor("#BBDEFB"))
-        palette.setColor(QPalette.HighlightedText, QColor("#1565C0"))
-        self.view.setPalette(palette)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 
-        # 启用交替行颜色
-        self.view.setAlternatingRowColors(True)
+        self.table.setStyleSheet(style.TABLE_STYLE())
+        self.table.setAlternatingRowColors(True)
 
-        # 表头配置
-        header = self.view.horizontalHeader()
-        header.setStretchLastSection(False)
-        self.view.verticalHeader().setVisible(False)
-        self.view.verticalHeader().setDefaultSectionSize(38)
+        self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setDefaultSectionSize(40)
 
-        # ---- 先设置列宽，确保第0列宽度足够 ----
         self._adjust_columns()
 
-        # ---- 再注入表头全选复选框 ----
-        self._header_checkbox = QCheckBox()
-        self._header_checkbox.setToolTip("全选 / 全不选")
-        # 设置复选框最小尺寸，确保可见
-        self._header_checkbox.setMinimumSize(18, 18)
-        self._header_checkbox.setMaximumSize(18, 18)
-        self._header_checkbox.setStyleSheet(
-            "QCheckBox { spacing: 0px; margin: 0px; padding: 0px; }"
-            "QCheckBox::indicator { width: 16px; height: 16px; }"
-        )
-        self._header_checkbox.setTristate(True)
-
-        # 关键点：使用 header 的 viewport 作为父控件，并正确定位
-        # QHeaderView.setIndexWidget 需要 QModelIndex
-        header.setIndexWidget(
-            self.model.index(0, PortTableModel.COL_CHECK),
-            self._header_checkbox)
-
-        # 复选框状态变化
-        self._header_checkbox.stateChanged.connect(
-            self._on_header_checkbox_state_changed)
-
-        # 把复选框变更回调绑定到视图
-        self.view._on_checkbox_toggled = self._on_checkbox_toggled
-
-        layout.addWidget(self.view)
-
-        # 延迟一帧再定位复选框，确保表头布局完成
-        from PyQt5.QtCore import QTimer
-        QTimer.singleShot(0, self._reposition_header_checkbox)
-
-    # ------------------------------------------------------------------
-    # 内部槽
-    # ------------------------------------------------------------------
-
-    def _on_header_checkbox_state_changed(self, state: int):
-        """
-        表头复选框状态变化（用户点击表头复选框）。
-        三态逻辑：
-          - Checked(2)    -> 全选
-          - Unchecked(0)  -> 全不选
-          - PartiallyChecked(1) -> 由 set_ports / _on_checkbox_toggled 自动同步
-        """
-        # 仅在 Checked / Unchecked 时主动设置全选状态；
-        # PartiallyChecked 由数据变更时同步，不再反向触发
-        if state == Qt.Checked:
-            self.model.set_all_checked(True)
-        elif state == Qt.Unchecked:
-            self.model.set_all_checked(False)
-        # PartiallyChecked 不处理（避免循环触发）
-
-        # 数据变更后重新注入按钮
-        self._inject_close_buttons()
-        self._emit_selection_changed()
-
-    def _on_checkbox_toggled(self):
-        """行复选框状态变化时，同步表头复选框状态并发出信号。"""
-        self._sync_header_checkbox()
-        self._emit_selection_changed()
-
-    def _sync_header_checkbox(self):
-        """
-        根据当前行勾选情况，更新表头复选框的三态显示。
-        """
-        if self.model.rowCount() == 0:
-            self._header_checkbox.setCheckState(Qt.Unchecked)
-            return
-
-        all_checked = self.model.is_all_checked()
-        none_checked = self.model.is_none_checked()
-
-        # 阻止 setCheckState 触发 stateChanged 导致循环
-        self._header_checkbox.blockSignals(True)
-        if all_checked:
-            self._header_checkbox.setCheckState(Qt.Checked)
-        elif none_checked:
-            self._header_checkbox.setCheckState(Qt.Unchecked)
-        else:
-            self._header_checkbox.setCheckState(Qt.PartiallyChecked)
-        self._header_checkbox.blockSignals(False)
-
-    def _emit_selection_changed(self):
-        """统计勾选数量并发出信号。"""
-        count = len(self.model.get_checked_ports())
-        self.selection_changed.emit(count)
-
-    def _on_kill_clicked(self, row: int):
-        """某行「关闭」按钮点击：取出对应 PortInfo 并发出信号。"""
-        port_info = self.model.get_port(row)
-        if port_info:
-            self.kill_requested.emit(port_info)
-
-    # ------------------------------------------------------------------
-    # 私有方法
-    # ------------------------------------------------------------------
-
-    def _inject_close_buttons(self):
-        """为每一行的「操作」列注入「关闭」按钮。"""
-        for row in range(self.model.rowCount()):
-            btn = QPushButton("关闭")
-            btn.setStyleSheet(style.BTN_DANGER_STYLE)
-            btn.clicked.connect(
-                lambda _checked=False, r=row: self._on_kill_clicked(r))
-            index = self.model.index(row, PortTableModel.COL_ACTION)
-            self.view.setIndexWidget(index, btn)
+        layout.addWidget(self.table)
 
     def _adjust_columns(self):
-        """调整列宽。"""
-        m = PortTableModel
-        view = self.view
-        view.setColumnWidth(m.COL_CHECK, 40)
-        view.setColumnWidth(m.COL_PORT, 75)
-        view.setColumnWidth(m.COL_PORT_TYPE, 95)
-        view.setColumnWidth(m.COL_PROTOCOL, 70)
-        view.setColumnWidth(m.COL_STATUS, 105)
-        view.setColumnWidth(m.COL_PID, 80)
-        view.setColumnWidth(m.COL_PROCESS_NAME, 160)
-        view.setColumnWidth(m.COL_USER, 70)
-        view.setColumnWidth(m.COL_DEV, 80)
-        view.setColumnWidth(m.COL_ACTION, 75)
-        view.horizontalHeader().setSectionResizeMode(
-            m.COL_COMMAND, QHeaderView.Stretch)
+        self.table.setColumnWidth(0, 48)
+        self.table.setColumnWidth(1, 75)
+        self.table.setColumnWidth(2, 95)
+        self.table.setColumnWidth(3, 70)
+        self.table.setColumnWidth(4, 105)
+        self.table.setColumnWidth(5, 80)
+        self.table.setColumnWidth(6, 160)
+        self.table.setColumnWidth(7, 200)
+        self.table.setColumnWidth(8, 70)
+        self.table.setColumnWidth(9, 80)
+        self.table.setColumnWidth(10, 80)
+        self.table.horizontalHeader().setSectionResizeMode(7, QHeaderView.Stretch)
+
+    def apply_theme(self):
+        """主题切换时重新应用所有样式。"""
+        self.table.setStyleSheet(style.TABLE_STYLE())
+        self._header.apply_theme()
+        for cb in self._row_checkboxes:
+            cb.setStyleSheet(style.CHECKBOX_STYLE())
+        for btn in self._kill_buttons:
+            btn.setStyleSheet(style.BTN_DANGER_STYLE())
+
+    # ------------------------------------------------------------------
+    # 全选逻辑
+    # ------------------------------------------------------------------
+
+    def _on_select_all_clicked(self, checked: bool):
+        self._set_all_rows_checked(checked)
+        self._emit_selection_changed()
+
+    def _set_all_rows_checked(self, checked: bool):
+        for cb in self._row_checkboxes:
+            cb.blockSignals(True)
+            cb.setChecked(checked)
+            cb.blockSignals(False)
+
+    def _update_header_state(self):
+        total = len(self._row_checkboxes)
+        if total == 0:
+            self._header.set_checked(False)
+            return
+        all_checked = all(cb.isChecked() for cb in self._row_checkboxes)
+        self._header.set_checked(all_checked)
+
+    # ------------------------------------------------------------------
+    # 行复选框/关闭按钮处理
+    # ------------------------------------------------------------------
+
+    def _on_row_checkbox_clicked(self, row: int):
+        checkbox = self._row_checkboxes[row]
+        if checkbox.isChecked():
+            self.table.selectRow(row)
+        else:
+            selected = self.table.selectedItems()
+            if selected and self.table.row(selected[0]) == row:
+                self.table.clearSelection()
+        self._update_header_state()
+        self._emit_selection_changed()
+
+    def _on_kill_clicked(self, row: int):
+        if 0 <= row < len(self._ports):
+            self.kill_requested.emit(self._ports[row])
+
+    def _emit_selection_changed(self):
+        self.selection_changed.emit(len(self.get_checked_ports()))
 
     # ------------------------------------------------------------------
     # 对外接口
     # ------------------------------------------------------------------
 
     def set_ports(self, ports):
-        """更新表格数据。"""
-        self.model.set_ports(ports)
-        self._inject_close_buttons()
-        self._adjust_columns()
-        # 数据重置后重新定位表头复选框
-        self._reposition_header_checkbox()
-        # 同步表头复选框状态
-        self._sync_header_checkbox()
+        self._ports = list(ports)
+        self._row_checkboxes = []
+        self._kill_buttons = []
+
+        self.table.setRowCount(0)
+        self.table.setRowCount(len(self._ports))
+
+        for row, port in enumerate(self._ports):
+            # 第0列：复选框
+            cb = QCheckBox()
+            cb.setStyleSheet(style.CHECKBOX_STYLE())
+            cb_container = _CenteredWidget(cb, margins=(0, 0, 0, 0))
+            self.table.setCellWidget(row, 0, cb_container)
+            self._row_checkboxes.append(cb)
+            cb.clicked.connect(
+                lambda _c, r=row: self._on_row_checkbox_clicked(r)
+            )
+
+            def _set_item(col, text, center=False):
+                item = QTableWidgetItem(str(text) if text is not None else "-")
+                if center:
+                    item.setTextAlignment(Qt.AlignCenter)
+                self.table.setItem(row, col, item)
+
+            _set_item(1, port.port, center=True)
+            _set_item(2, port.port_type, center=True)
+            _set_item(3, port.protocol, center=True)
+            _set_item(4, port.status, center=True)
+            _set_item(5, port.pid, center=True)
+            _set_item(6, port.process_name)
+
+            cmd_item = QTableWidgetItem(port.command_line or "")
+            cmd_item.setToolTip(port.command_line or "")
+            self.table.setItem(row, 7, cmd_item)
+
+            _set_item(8, port.user if port.user else "-", center=True)
+            _set_item(9, "是" if port.is_development_process else "否", center=True)
+
+            # 第10列：关闭按钮
+            btn = QPushButton("关闭")
+            btn.setStyleSheet(style.BTN_DANGER_STYLE())
+            self._kill_buttons.append(btn)
+            btn_container = _CenteredWidget(btn, margins=(4, 2, 4, 2))
+            self.table.setCellWidget(row, 10, btn_container)
+            btn.clicked.connect(
+                lambda _c, r=row: self._on_kill_clicked(r)
+            )
+
+        self._update_header_state()
         self._emit_selection_changed()
+        self._adjust_columns()
 
     def get_checked_ports(self):
-        """返回当前勾选的 PortInfo 列表。"""
-        return self.model.get_checked_ports()
-
-    def resizeEvent(self, event):
-        """窗口尺寸变化时，重新定位表头复选框。"""
-        super().resizeEvent(event)
-        self._reposition_header_checkbox()
-
-    def _reposition_header_checkbox(self):
-        """将表头复选框定位到第0列中心位置。"""
-        if not hasattr(self, '_header_checkbox') or not self._header_checkbox:
-            return
-        m = PortTableModel
-        col_x = self.view.columnViewportPosition(m.COL_CHECK)
-        col_w = self.view.columnWidth(m.COL_CHECK)
-        header_h = self.view.horizontalHeader().height()
-        checkbox_size = 18
-        x = col_x + (col_w - checkbox_size) // 2
-        y = (header_h - checkbox_size) // 2
-        self._header_checkbox.setGeometry(x, y, checkbox_size, checkbox_size)
+        return [
+            self._ports[i] for i, cb in enumerate(self._row_checkboxes)
+            if cb.isChecked() and i < len(self._ports)
+        ]

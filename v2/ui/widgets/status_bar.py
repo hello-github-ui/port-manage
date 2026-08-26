@@ -6,8 +6,7 @@
 # @Software: PyCharm
 # @Description:
 #   底部状态栏控件：状态消息 + 自动刷新状态。
-#   对应 Java 前端 Footer 区块。
-#   纯展示型控件，由主窗口调用方法更新内容。
+#   透明背景，无白色卡片框。
 # ======================================================================
 
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QWidget
@@ -23,37 +22,51 @@ class StatusBar(QWidget):
         self._init_ui()
 
     def _init_ui(self):
-        self.setStyleSheet(style.CARD_STYLE)
+        self.setStyleSheet(style.CARD_STYLE())
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(20, 10, 20, 10)
+        layout.setContentsMargins(5, 8, 5, 8)
         layout.setSpacing(15)
 
-        # 左侧：状态消息（成功默认绿色）
-        self.status_label = QLabel("就绪")
-        self.status_label.setStyleSheet(style.STATUS_SUCCESS_STYLE)
+        # 左侧：状态消息
+        self.status_label = QLabel("✅ 就绪")
+        self.status_label.setStyleSheet(style.STATUS_SUCCESS_STYLE())
         layout.addWidget(self.status_label)
 
-        # 弹簧把右侧信息推到最右
         layout.addStretch()
 
         # 右侧：自动刷新状态
-        self.auto_refresh_label = QLabel("自动刷新：开启 (5 秒)")
-        self.auto_refresh_label.setStyleSheet(style.STATUS_INFO_STYLE)
+        self.auto_refresh_label = QLabel("🔄 自动刷新：开启 (5 秒)")
+        self.auto_refresh_label.setStyleSheet(style.STATUS_INFO_STYLE())
         layout.addWidget(self.auto_refresh_label)
 
-    # ------------------------------------------------------------------
-    # 对外接口
-    # ------------------------------------------------------------------
+    def apply_theme(self):
+        """主题切换时重新应用样式。"""
+        self.setStyleSheet(style.CARD_STYLE())
+        # 保持成功/错误状态，重新应用信息标签样式
+        current_text = self.status_label.text()
+        is_success = current_text.startswith("✅") or current_text == "就绪"
+        self.status_label.setStyleSheet(
+            style.STATUS_SUCCESS_STYLE() if is_success else 
+            f"color: {style.get_colors().danger}; font-size: 9pt; font-weight: 600;"
+        )
+        self.auto_refresh_label.setStyleSheet(style.STATUS_INFO_STYLE())
 
     def set_status(self, message: str, success: bool = True):
-        """更新左侧状态消息，success 控制颜色（绿/红）。"""
-        self.status_label.setText(message)
+        """更新左侧状态消息。"""
+        prefix = "✅" if success else "❌"
+        self.status_label.setText(f"{prefix} {message}")
+        c = style.get_colors()
         self.status_label.setStyleSheet(
-            style.STATUS_SUCCESS_STYLE if success else
-            "color: #F44336; font-size: 13px; font-weight: bold;"
+            style.STATUS_SUCCESS_STYLE() if success else
+            f"color: {c.danger}; font-size: 9pt; font-weight: 600;"
         )
 
     def set_auto_refresh_info(self, text: str):
         """更新右侧自动刷新状态文本。"""
-        self.auto_refresh_label.setText(text)
+        if "暂停" in text:
+            self.auto_refresh_label.setText(f"⏸ {text}")
+        elif "开启" in text:
+            self.auto_refresh_label.setText(f"🔄 {text}")
+        else:
+            self.auto_refresh_label.setText(text)
