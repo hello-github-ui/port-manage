@@ -65,3 +65,4 @@ META-INF/MANIFEST.MF
 **/__pycache__/
 *.pyc
 *.pyo
+**/*.spec

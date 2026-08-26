@@ -144,13 +144,13 @@ python PortManager.py
 
 ```powershell
 # 在项目根目录执行
-pyinstaller --name "PortManager" \
-    --windowed \
-    --icon "v2/icon.ico" \
-    --add-data "v2/icon.ico;v2/" \
-    --clean \
-    --noconfirm \
-    PortManager.py
+pyinstaller --name "PortManager" ^
+--windowed ^
+--icon "v2/icon.ico" ^
+--add-data "v2/icon.ico;v2/" ^
+--clean ^
+--noconfirm ^
+"PortManager.py"
 ```
 
 打包完成后，产物在 `dist/PortManager/` 目录下，整个目录压缩为 `PortManager-Windows-x64.zip` 即可发布。
@@ -158,14 +158,14 @@ pyinstaller --name "PortManager" \
 #### 打包为单文件（分发方便，启动稍慢）
 
 ```powershell
-pyinstaller --name "PortManager"  \
-	--onefile  \
-	--windowed  \
-	--icon "v2/icon.ico"  \
-	--add-data "v2/icon.ico;v2/"  \
-	--clean  \
-	--noconfirm  \
-	PortManager.py
+pyinstaller --name "PortManager" ^
+--onefile ^
+--windowed ^
+--icon "v2/icon.ico" ^
+--add-data "v2/icon.ico;v2/" ^
+--clean ^
+--noconfirm ^
+"PortManager.py"
 ```
 
 产物为 `dist/PortManager.exe` 单文件，直接压缩发布即可。
