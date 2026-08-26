@@ -126,9 +126,11 @@ class ScanService(QObject):
                      process_type: str = "全部",
                      protocol: str = "全部",
                      dev_only: bool = False,
+                     common_port=None,
                      ports: List[PortInfo] = None) -> List[PortInfo]:
         """
         筛选端口列表。
+        :param common_port: 按指定端口号筛选（int），None表示不按端口筛选
         """
         if ports is None:
             ports = self._cached_ports
@@ -142,6 +144,8 @@ class ScanService(QObject):
             if protocol != "全部" and p.protocol != protocol:
                 continue
             if dev_only and not p.is_development_process:
+                continue
+            if common_port is not None and p.port != common_port:
                 continue
             result.append(p)
         return result

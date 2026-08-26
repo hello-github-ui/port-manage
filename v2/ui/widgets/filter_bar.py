@@ -74,16 +74,19 @@ class FilterBar(QWidget):
         self.dev_process_box.currentTextChanged.connect(self._on_filter_changed)
         layout.addWidget(self.dev_process_box)
 
-        # 常用端口
+        # 常用端口（可编辑，既可以从下拉选择，也可以手动输入任意端口）
         layout.addWidget(self._make_label("常用端口："))
         self.common_port_box = QComboBox()
+        self.common_port_box.setEditable(True)
         self.common_port_box.setStyleSheet(style.COMBO_BOX_STYLE())
-        self.common_port_box.addItem("选择端口")
+        self.common_port_box.addItem("")  # 空字符串表示不筛选
         for p in settings.COMMON_PORTS:
             service = settings.DATABASE_PORTS.get(p)
             label = f"{p} - {service}" if service else str(p)
             self.common_port_box.addItem(label, p)
         self.common_port_box.currentIndexChanged.connect(self._on_common_port_changed)
+        self.common_port_box.editTextChanged.connect(self._on_common_port_changed)
+        self.common_port_box.setPlaceholderText("输入或选择端口")
         layout.addWidget(self.common_port_box)
 
         # 弹簧，把清除按钮推到右侧
@@ -120,12 +123,35 @@ class FilterBar(QWidget):
 
     def get_filters(self) -> dict:
         """获取当前筛选条件（公开方法）。"""
+        # 解析常用端口：优先使用itemData（下拉选择），否则解析输入文本
+        common_port = None
+        # 如果有itemData（下拉选择项），直接使用
+        data = self.common_port_box.currentData()
+        if data is not None:
+            common_port = data
+        else:
+            # 用户手动输入，尝试解析为整数
+            text = self.common_port_box.currentText().strip()
+            # 去掉可能的 "端口 - 服务名" 格式，只取数字部分
+            if text:
+                num_str = ""
+                for ch in text:
+                    if ch.isdigit():
+                        num_str += ch
+                    else:
+                        break
+                if num_str:
+                    try:
+                        common_port = int(num_str)
+                    except ValueError:
+                        common_port = None
+
         return {
             "port_type": self._PORT_TYPE_MAP[self.port_type_box.currentText()],
             "process_type": self._PROCESS_TYPE_MAP[self.process_type_box.currentText()],
             "protocol": self._PROTOCOL_MAP[self.protocol_box.currentText()],
             "dev_only": self._DEV_PROCESS_MAP[self.dev_process_box.currentText()] is True,
-            "common_port": self.common_port_box.currentData(),
+            "common_port": common_port,
         }
 
     def _current_filters(self) -> dict:
@@ -135,26 +161,31 @@ class FilterBar(QWidget):
         self.filter_changed.emit(self._current_filters())
 
     def _on_common_port_changed(self):
-        if self.common_port_box.currentIndex() == 0:
-            self._on_filter_changed()
-            return
+        # 获取当前是否有选择/输入端口
+        filters = self._current_filters()
+        has_port = filters.get("common_port") is not None
 
-        # 选择了常用端口，重置其他筛选
-        for box in (self.port_type_box, self.process_type_box,
-                    self.protocol_box, self.dev_process_box):
-            box.blockSignals(True)
-            box.setCurrentIndex(0)
-            box.blockSignals(False)
+        if has_port:
+            # 选择/输入了端口，重置其他筛选条件（方便快速定位端口）
+            for box in (self.port_type_box, self.process_type_box,
+                        self.protocol_box, self.dev_process_box):
+                box.blockSignals(True)
+                box.setCurrentIndex(0)
+                box.blockSignals(False)
 
         self.filter_changed.emit(self._current_filters())
 
     def clear_all(self):
         """清除所有筛选，重置为默认值。"""
         for box in (self.port_type_box, self.process_type_box,
-                    self.protocol_box, self.dev_process_box,
-                    self.common_port_box):
+                    self.protocol_box, self.dev_process_box):
             box.blockSignals(True)
             box.setCurrentIndex(0)
             box.blockSignals(False)
+        # 清空常用端口（可编辑combobox需要同时清空文本）
+        self.common_port_box.blockSignals(True)
+        self.common_port_box.setCurrentIndex(0)
+        self.common_port_box.clearEditText()
+        self.common_port_box.blockSignals(False)
         self.clear_filter.emit()
         self.filter_changed.emit(self._current_filters())

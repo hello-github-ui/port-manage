@@ -225,6 +225,7 @@ class MainWindow(QMainWindow):
             process_type=filters.get("process_type", "全部"),
             protocol=filters.get("protocol", "全部"),
             dev_only=filters.get("dev_only", False),
+            common_port=filters.get("common_port"),
             ports=filtered
         )
 
