@@ -15,6 +15,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QSizePolicy,
                              QSpacerItem, QWidget)
 
+from v2.config import settings
 from v2.ui import style
 
 
@@ -49,13 +50,26 @@ class TopBar(QWidget):
         layout.setContentsMargins(5, 8, 5, 8)
         layout.setSpacing(20)
 
-        # 左侧：应用标题
-        self.title_label = QLabel("🔌 端口管理工具")
+        # 左侧：应用标题 + 版本号
+        self.title_label = QLabel(f"🔌 {settings.APP_TITLE}")
         self.title_label.setStyleSheet(style.TITLE_LABEL_STYLE())
         layout.addWidget(self.title_label)
 
+        # 版本号标签（小号灰色字体）
+        colors = style.get_colors()
+        self.version_label = QLabel(settings.APP_VERSION)
+        self.version_label.setStyleSheet(
+            f"color: {colors.text_muted}; font-size: 11px; padding: 0 0 2px 0;"
+        )
+        layout.addWidget(self.version_label)
+
         # 中间：弹簧
         layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+
+        # 作者信息
+        self.author_label = QLabel(f"👤 {settings.APP_AUTHOR}")
+        self.author_label.setStyleSheet(style.INFO_LABEL_STYLE())
+        layout.addWidget(self.author_label)
 
         # 右侧信息组：自动检测操作系统
         os_name = platform.system()
@@ -94,8 +108,13 @@ class TopBar(QWidget):
 
     def apply_theme(self):
         """主题切换时重新应用样式。"""
+        colors = style.get_colors()
         self.setStyleSheet(style.CARD_STYLE())
         self.title_label.setStyleSheet(style.TITLE_LABEL_STYLE())
+        self.version_label.setStyleSheet(
+            f"color: {colors.text_muted}; font-size: 11px; padding: 0 0 2px 0;"
+        )
+        self.author_label.setStyleSheet(style.INFO_LABEL_STYLE())
         self.os_label.setStyleSheet(style.INFO_LABEL_STYLE())
         self.port_count_label.setStyleSheet(style.INFO_LABEL_STYLE())
         self.theme_combo.setStyleSheet(style.COMBO_BOX_STYLE())

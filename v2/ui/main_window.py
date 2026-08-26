@@ -37,8 +37,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("端口管理工具")
-        self.resize(1280, 760)
+        self.setWindowTitle(f"{settings.APP_TITLE} {settings.APP_VERSION}")
+        self.resize(settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT)
 
         # 服务层
         self.scan_service = ScanService(self)
