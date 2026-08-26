@@ -47,12 +47,15 @@ class SearchBar(QWidget):
         # 获取Qt标准样式，用于获取内置图标
         qt_style = QApplication.style()
 
-        # 搜索输入框
+        # 搜索输入框（内置清除按钮，文本变化时自动搜索）
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("🔍 搜索端口号 / 进程名 / PID...")
         self.search_input.setMinimumWidth(240)
         self.search_input.setStyleSheet(style.LINE_EDIT_STYLE())
+        self.search_input.setClearButtonEnabled(True)  # 内置"x"清除按钮
         self.search_input.returnPressed.connect(self._on_search_clicked)
+        # 文本变化时自动搜索：清空内容时自动刷新显示所有结果
+        self.search_input.textChanged.connect(self._on_text_changed)
         layout.addWidget(self.search_input)
 
         # 搜索按钮
@@ -90,6 +93,12 @@ class SearchBar(QWidget):
 
     def _on_search_clicked(self):
         self.search_requested.emit(self.search_input.text().strip())
+
+    def _on_text_changed(self, text: str):
+        """文本变化时：清空内容自动搜索刷新显示全部，输入时不自动搜索（避免频繁刷新，回车/点搜索按钮触发）。"""
+        # 只有当内容被清空（点击x或手动删除完）时自动刷新
+        if not text.strip():
+            self.search_requested.emit("")
 
     def _on_auto_refresh_toggled(self):
         self._auto_refresh_active = not self._auto_refresh_active
