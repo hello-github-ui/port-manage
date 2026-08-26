@@ -232,8 +232,22 @@ class MainWindow(QMainWindow):
         self._displayed_ports = filtered
         self.port_table.set_ports(filtered)
         self.stats_bar.update_stats(self.scan_service.get_statistics(filtered))
-        self.top_bar.set_port_count(len(all_ports))
+        # 顶部显示当前筛选后的端口数，总端口数在扫描完成时更新
+        self.top_bar.set_port_count(len(filtered))
         self.stats_bar.set_last_scan_time(self.scan_service.last_scan_time_str)
+        # 更新状态栏消息：显示当前结果数
+        if len(filtered) == 0:
+            if keyword or filters.get("common_port") or filters.get("port_type") != "全部" \
+                    or filters.get("process_type") != "全部" or filters.get("protocol") != "全部" \
+                    or filters.get("dev_only"):
+                self.status_bar.show_message(f"🔍 筛选结果：0 个端口")
+            else:
+                self.status_bar.show_message(f"✅ 加载成功: {len(all_ports)} 个端口")
+        else:
+            if len(filtered) == len(all_ports) and not keyword:
+                self.status_bar.show_message(f"✅ 加载成功: {len(all_ports)} 个端口")
+            else:
+                self.status_bar.show_message(f"🔍 显示 {len(filtered)} / {len(all_ports)} 个端口")
 
     # ------------------------------------------------------------------
     # 刷新/自动刷新

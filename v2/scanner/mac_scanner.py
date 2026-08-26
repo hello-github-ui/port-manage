@@ -44,14 +44,15 @@ class MacPortScanner(PortScanner):
         process_info = self._get_all_process_info()
 
         result = []
-        seen_ports = set()
+        seen_ports = set()  # (protocol, port, pid) 去重
 
         # 第一步：扫描TCP监听端口
         tcp_ports = self._run_lsof_tcp()
         for port, pid, proc_name, user, local_addr in tcp_ports:
-            if port in seen_ports:
+            key = ("TCP", port, pid)
+            if key in seen_ports:
                 continue
-            seen_ports.add(port)
+            seen_ports.add(key)
             cmd_line = process_info.get(pid, {}).get("cmd", "")
             if not proc_name:
                 proc_name = process_info.get(pid, {}).get("name", f"PID_{pid}")
@@ -78,9 +79,10 @@ class MacPortScanner(PortScanner):
         # 第二步：扫描UDP端口
         udp_ports = self._run_lsof_udp()
         for port, pid, proc_name, user, local_addr in udp_ports:
-            if port in seen_ports:
+            key = ("UDP", port, pid)
+            if key in seen_ports:
                 continue
-            seen_ports.add(port)
+            seen_ports.add(key)
             cmd_line = process_info.get(pid, {}).get("cmd", "")
             if not proc_name:
                 proc_name = process_info.get(pid, {}).get("name", f"PID_{pid}")

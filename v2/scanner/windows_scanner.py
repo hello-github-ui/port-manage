@@ -26,12 +26,10 @@ from v2.utils.port_type_identifier import (identify_port_type,
                                            identify_process_type,
                                            is_development_process)
 
-# netstat输出正则：协议  本地地址  外部地址  状态  PID
-# 示例行: TCP    0.0.0.0:135            0.0.0.0:0              LISTENING       1192
-NETSTAT_PATTERN = re.compile(
-    r'^\s*(TCP|UDP)\s+(\S+?):(\d+)\s+\S+:\d+\s+(\S+)?\s*(\d+)\s*$',
-    re.MULTILINE
-)
+# 本地地址:端口 匹配（支持IPv6 [::]:port格式）
+LOCAL_ADDR_PATTERN = re.compile(r'\[?([^\s\]]+)\]?:(\d+)')
+# PID 是行尾的数字
+PID_PATTERN = re.compile(r'(\d+)\s*$')
 
 
 class WindowsPortScanner(PortScanner):
@@ -47,31 +45,73 @@ class WindowsPortScanner(PortScanner):
             return []
 
         # 解析netstat，收集所有PID
-        port_pid_map: Dict[int, dict] = {}  # port -> {protocol, pid, status, local_addr}
+        port_pid_map: Dict[tuple, dict] = {}  # (protocol, port, pid) -> {protocol, pid, status, local_addr}
         pids = set()
 
-        for match in NETSTAT_PATTERN.finditer(netstat_data):
-            protocol = match.group(1)
-            local_addr = match.group(2)
-            port = int(match.group(3))
-            status = match.group(4) or ""
-            pid = int(match.group(5))
-
-            # 只保留LISTENING状态的TCP端口（UDP没有状态，也保留）
-            if protocol == "TCP" and status.upper() != "LISTENING":
+        for line in netstat_data.splitlines():
+            line = line.strip()
+            if not line:
                 continue
 
-            if port in port_pid_map:
-                continue  # 同端口多个PID时取第一个（后续可以支持多PID）
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+
+            protocol = parts[0]
+            if protocol not in ("TCP", "UDP"):
+                continue
+
+            # 解析本地地址:端口
+            local_addr_port = parts[1]
+            addr_match = LOCAL_ADDR_PATTERN.search(local_addr_port)
+            if not addr_match:
+                continue
+            local_addr = addr_match.group(1)
+            port = int(addr_match.group(2))
+
+            # 外部地址（第3列）
+            foreign_addr = parts[2] if len(parts) >= 3 else ""
+
+            # 解析PID（最后一个字段）
+            pid_match = PID_PATTERN.search(line)
+            if not pid_match:
+                continue
+            pid = int(pid_match.group(1))
+
+            # 解析状态：TCP有状态，UDP没有
+            # TCP格式: parts = [TCP, 本地地址, 外部地址, 状态, PID] (至少5个字段)
+            # UDP格式: parts = [UDP, 本地地址, 外部地址, PID] (只有4个字段，无状态列)
+            status = ""
+            if protocol == "TCP":
+                # TCP需要至少5列：Proto Local Foreign State PID
+                if len(parts) < 5:
+                    continue
+                status = parts[3]
+                if status not in ("LISTENING", "ESTABLISHED", "TIME_WAIT", "CLOSE_WAIT", "SYN_SENT", "SYN_RECEIVED"):
+                    continue
+                # 只保留LISTENING状态的TCP端口
+                if status != "LISTENING":
+                    continue
+            else:
+                # UDP：只保留外部地址为 *:* 的条目（表示正在监听），
+                # 外部地址是具体IP:port的是临时对外通信，不需要显示
+                if not foreign_addr.startswith("*"):
+                    continue
+                status = ""
 
             # 过滤掉PID 0（System Idle Process，不是真正的监听进程）
             if pid == 0:
                 continue
 
-            port_pid_map[port] = {
+            # 按(protocol, port, pid)去重（同一个端口可能被多个进程/协议使用）
+            key = (protocol, port, pid)
+            if key in port_pid_map:
+                continue
+
+            port_pid_map[key] = {
                 "protocol": protocol,
                 "pid": pid,
-                "status": status.upper() or "",
+                "status": status,
                 "local_addr": local_addr
             }
             pids.add(pid)
@@ -87,18 +127,18 @@ class WindowsPortScanner(PortScanner):
 
         # 第四步：组装PortInfo并进行类型识别
         result = []
-        for port, info in port_pid_map.items():
+        for (proto, port_num, pid_key), info in port_pid_map.items():
             pid = info["pid"]
             proc_name = process_names.get(pid, f"PID_{pid}" if pid > 0 else "System")
             cmd_line = command_lines.get(pid, "")
 
             # 识别类型
             proc_type = identify_process_type(proc_name, cmd_line)
-            port_type = identify_port_type(port, proc_name, cmd_line)
+            port_type = identify_port_type(port_num, proc_name, cmd_line)
             is_dev = is_development_process(proc_name, cmd_line)
 
             port_info = PortInfo(
-                port=port,
+                port=port_num,
                 protocol=info["protocol"],
                 status=info["status"],
                 pid=pid,
